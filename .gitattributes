@@ -1,0 +1,8 @@
+# 保持 shell 脚本与二进制不被换行符转换破坏
+*.sh text eol=lf
+*.bat text eol=crlf
+*.exe binary
+*.jar binary
+*.png binary
+*.gif binary
+*.zip binary
