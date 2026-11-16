@@ -8,11 +8,10 @@ desktop.ini
 
 # 压测运行产物
 results/
-*.jtl
 report/
+*.jtl
 *.log
 
-# 扫描/渗透测试结果：含目标真实 IP、域名与漏洞细节，
-# 不纳入公开仓库（如需要请改为私有仓库后再纳入）
+# 渗透测试产物不属于本仓库（由独立仓库管理），此处仅作兜底
 strix_runs/
-reports/
+*.sarif
