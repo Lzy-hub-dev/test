@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>压测与性能排查手册</title>
+<style>
+:root{
+  --ink:#14181F; --ink-2:#3D4757; --ink-3:#6B7686;
+  --line:#E3E6EB; --bg:#F7F8FA; --card:#FFFFFF;
+  --blue:#1D4ED8; --blue-bg:#EFF4FF;
+  --red:#B42318; --red-bg:#FEF3F2;
+  --warn:#B54708; --warn-bg:#FFFAEB;
+  --ok:#067647; --ok-bg:#ECFDF3;
+  --purple:#534AB7; --purple-bg:#F1F0FE;
+  --teal:#0F6E56; --teal-bg:#E1F5EE;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px; line-height:1.75; letter-spacing:.01em;
+}
+.wrap{max-width:980px;margin:0 auto;padding:56px 32px 120px}
+header.top{border-bottom:2px solid var(--ink);padding-bottom:28px;margin-bottom:36px}
+.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin:0 0 14px}
+h1{font-size:34px;line-height:1.25;margin:0 0 16px;font-weight:650;letter-spacing:-.01em}
+.lede{font-size:16px;color:var(--ink-2);margin:0;max-width:740px}
+.meta{margin-top:20px;font-size:13px;color:var(--ink-3);display:flex;gap:22px;flex-wrap:wrap}
+.meta b{color:var(--ink-2);font-weight:600}
+
+nav.toc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 26px;margin-bottom:52px}
+nav.toc h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:0 0 14px;font-weight:600}
+nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:40px}
+nav.toc li{margin:0 0 7px;font-size:14px}
+nav.toc a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid transparent}
+nav.toc a:hover{color:var(--blue);border-bottom-color:var(--blue)}
+
+h2.chap{font-size:24px;margin:0 0 8px;font-weight:650;letter-spacing:-.01em;display:flex;align-items:baseline;gap:12px}
+h2.chap .no{font-size:13px;font-weight:600;letter-spacing:.1em;color:var(--ink-3);border:1px solid var(--line);border-radius:6px;padding:3px 8px;background:var(--card);flex:none}
+.chap-intro{color:var(--ink-2);margin:0 0 26px;font-size:15px;max-width:790px}
+section{margin-bottom:72px;scroll-margin-top:24px}
+
+ul.tree{list-style:none;margin:0;padding:0}
+ul.tree > li{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin-bottom:14px;scroll-margin-top:20px}
+.lv1{display:flex;align-items:baseline;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-weight:600;padding:2px 7px;border-radius:5px;letter-spacing:.03em;flex:none;background:#F2F4F7;color:var(--ink-2)}
+.lv1 h3{font-size:17px;margin:0;font-weight:650;line-height:1.5}
+.lv1 .goal{font-size:12.5px;color:var(--ink-3);margin-left:auto;text-align:right;flex:none}
+.c-blue .code{color:var(--blue);background:var(--blue-bg)}
+.c-red .code{color:var(--red);background:var(--red-bg)}
+.c-warn .code{color:var(--warn);background:var(--warn-bg)}
+.c-ok .code{color:var(--ok);background:var(--ok-bg)}
+.c-purple .code{color:var(--purple);background:var(--purple-bg)}
+.c-teal .code{color:var(--teal);background:var(--teal-bg)}
+
+.plain{background:var(--warn-bg);border-left:3px solid var(--warn);padding:10px 15px;border-radius:0 8px 8px 0;margin:0 0 12px;font-size:13.5px;color:#7A3E06;line-height:1.7}
+.plain b{color:#5C2E04}
+.def{font-size:14px;color:var(--ink-2);margin:0 0 12px}
+
+ul.sub{list-style:none;margin:0;padding:0;border-left:2px solid var(--line);padding-left:18px}
+ul.sub > li{margin:0 0 12px;font-size:14px;color:var(--ink-2)}
+ul.sub > li:last-child{margin-bottom:0}
+ul.sub b{color:var(--ink);font-weight:600}
+ul.sub ul{list-style:none;margin:7px 0 0;padding-left:16px;border-left:1px dashed var(--line)}
+ul.sub ul li{font-size:13.5px;color:var(--ink-3);margin:0 0 5px}
+ul.sub ul li::before{content:"·";margin-right:8px;color:var(--ink-3)}
+ul.sub ul li b{color:var(--ink-2)}
+
+.rel{font-size:12.5px;color:var(--ink-3);margin:12px 0 0;padding-top:10px;border-top:1px dashed var(--line)}
+.mk{font-weight:700;font-style:normal}
+.mk.no{color:var(--red)}
+.mk.yes{color:var(--ok)}
+.xref{color:var(--blue);text-decoration:none;border-bottom:1px dotted var(--blue)}
+.xref:hover{border-bottom-style:solid}
+.xref.r{color:var(--red);border-bottom-color:var(--red)}
+.xref.g{color:var(--ok);border-bottom-color:var(--ok)}
+.xref.p{color:var(--purple);border-bottom-color:var(--purple)}
+
+figure{margin:0 0 30px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:26px 20px 18px}
+figcaption{font-size:12.5px;color:var(--ink-3);text-align:center;margin-top:14px}
+
+table{width:100%;border-collapse:collapse;font-size:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 0 18px}
+th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#FAFBFC;font-size:12.5px;letter-spacing:.05em;color:var(--ink-3);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+td code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#F2F4F7;padding:1px 6px;border-radius:4px;color:var(--ink-2)}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+pre{background:#FBFCFE;border:1px solid var(--line);border-radius:10px;padding:13px 16px;overflow-x:auto;font-size:12.5px;line-height:1.7;margin:10px 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#243B53}
+pre code{background:none;padding:0;font-size:12.5px}
+pre .cm{color:var(--ink-3)}
+pre .del{color:var(--red);text-decoration:line-through;opacity:.75}
+pre .add{color:var(--ok);font-weight:600}
+code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#F2F4F7;padding:1.5px 5px;border-radius:4px;color:#243B53}
+
+.tag{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.02em}
+.tag.b{color:var(--blue);background:var(--blue-bg)}
+.tag.r{color:var(--red);background:var(--red-bg)}
+.tag.w{color:var(--warn);background:var(--warn-bg)}
+.tag.g{color:var(--ok);background:var(--ok-bg)}
+
+.callout{background:var(--blue-bg);border:1px solid #C7D7FE;border-radius:12px;padding:20px 24px;margin:0 0 28px}
+.callout h4{margin:0 0 8px;font-size:14px;font-weight:650;color:#1E3A8A}
+.callout p{margin:0;font-size:14px;color:#1E3A8A;opacity:.92}
+.callout.warn{background:var(--warn-bg);border-color:#F2C879}
+.callout.warn h4,.callout.warn p{color:#7A3E06}
+.callout.bad{background:var(--red-bg);border-color:#F2B8B2}
+.callout.bad h4,.callout.bad p{color:#7A271A}
+.callout.ok{background:var(--ok-bg);border-color:#A9DFC0}
+.callout.ok h4,.callout.ok p{color:#085041}
+
+.check{list-style:none;margin:0;padding:0}
+.check li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 18px;margin-bottom:9px;font-size:14px;display:flex;gap:12px;align-items:flex-start}
+.check li .box{width:15px;height:15px;border:1.5px solid #B8BFC9;border-radius:4px;flex:none;margin-top:4px}
+.check li .ly{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;font-weight:600;color:var(--ink-3);flex:none;margin-top:2px;width:30px}
+
+footer{border-top:1px solid var(--line);padding-top:24px;font-size:13px;color:var(--ink-3)}
+@media(max-width:700px){
+  .wrap{padding:36px 18px 80px}
+  h1{font-size:26px}
+  nav.toc ol{columns:1}
+  .lv1 .goal{margin-left:0;text-align:left;width:100%}
+  table{font-size:13px}
+  th,td{padding:10px 12px}
+}
+@media print{
+  body{background:#fff}
+  .wrap{max-width:none;padding:0}
+  section{page-break-inside:avoid}
+  nav.toc{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <p class="kicker">Load Testing · Performance Diagnosis</p>
+  <h1>压测与性能排查手册</h1>
+  <p class="lede">从「跑一次压测」到「定位到某一层、改对某一处、验证真的变快」。前半部分讲怎么测、怎么判，中间是一本「看到什么现象 → 该做什么」的对照手册，后半部分讲专业团队是怎么从架构上把问题消化掉的。</p>
+  <div class="meta">
+    <span><b>案例</b>　piSports 玩家端（12 核 / 47G / MySQL 单实例）</span>
+    <span><b>结论</b>　瓶颈是 24 个数据库连接被一条 15.4 秒的 SQL 占满</span>
+    <span><b>结构</b>　7 章 × 46 个知识点</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>目录</h2>
+  <ol>
+    <li><a href="#s0">零 · 一页看懂：一条请求的旅程</a></li>
+    <li><a href="#s1">一 · 怎么测：六步走完一次有效压测</a></li>
+    <li><a href="#s2">二 · 怎么判：四层瓶颈，先撞哪层算哪层</a></li>
+    <li><a href="#s3">三 · 怎么办：现象 → 动作 对照手册</a></li>
+    <li><a href="#s4">四 · 实战复盘：这次到底坏在哪</a></li>
+    <li><a href="#s5">五 · 修复与验收：改什么、怎么验、什么不改</a></li>
+    <li><a href="#s6">六 · 专业做法：大厂怎么把问题消化在架构里</a></li>
+    <li><a href="#s7">七 · 自检清单与容量结论</a></li>
+  </ol>
+</nav>
+
+<section id="s0">
+  <h2 class="chap"><span class="no">零</span>一页看懂：一条请求的旅程</h2>
+  <p class="chap-intro">性能问题看起来复杂，其实就是「一条请求从用户手机走到硬盘，中间哪一站堵了」。这一页把七站画出来，标上本次真正堵住的两站——后面的所有内容，都是围绕这两站展开的。</p>
+
+  <figure>
+    <svg width="100%" viewBox="0 0 680 500" role="img" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,-apple-system,PingFang SC,sans-serif">
+      <title>一条请求经过的七个环节，以及本次堵塞的位置</title>
+      <desc>从浏览器到磁盘共七站，其中连接池与 MySQL 执行引擎是本次真正的堵点，磁盘全程未参与</desc>
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <text x="40" y="26" font-size="12" font-weight="600" fill="#6B7686">请求流向 ↓</text>
+      <text x="312" y="26" font-size="12" font-weight="600" fill="#6B7686">这一站堵了会怎样</text>
+
+      <rect x="40" y="56" width="250" height="44" rx="9" fill="#EFF4FF" stroke="#1D4ED8" stroke-width="0.5"/>
+      <text x="58" y="74" font-size="13" font-weight="600" fill="#1E3A8A">① 浏览器 / H5 前端</text>
+      <text x="58" y="91" font-size="11.5" fill="#3B5BA9">每个用户各开一个定时器</text>
+      <text x="312" y="83" font-size="11.5" fill="#3D4757">用户越多，请求越多——它自己不会变慢</text>
+
+      <path d="M165 102 L165 112" stroke="#9AA6B8" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+      <rect x="40" y="114" width="250" height="44" rx="9" fill="#EFF4FF" stroke="#1D4ED8" stroke-width="0.5"/>
+      <text x="58" y="132" font-size="13" font-weight="600" fill="#1E3A8A">② Nginx / 网关</text>
+      <text x="58" y="149" font-size="11.5" fill="#3B5BA9">转发、限流、TLS</text>
+      <text x="312" y="141" font-size="11.5" fill="#3D4757">只做转发，本次不是瓶颈</text>
+
+      <path d="M165 160 L165 170" stroke="#9AA6B8" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+      <rect x="40" y="172" width="250" height="44" rx="9" fill="#EFF4FF" stroke="#1D4ED8" stroke-width="0.5"/>
+      <text x="58" y="190" font-size="13" font-weight="600" fill="#1E3A8A">③ 应用线程（虚拟线程）</text>
+      <text x="58" y="207" font-size="11.5" fill="#3B5BA9">JDK21，几乎可以无限开</text>
+      <text x="312" y="199" font-size="11.5" fill="#3D4757">开了虚拟线程后，它不再是并发上限</text>
+
+      <path d="M165 218 L165 228" stroke="#9AA6B8" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+      <rect x="40" y="230" width="250" height="44" rx="9" fill="#FEF3F2" stroke="#B42318" stroke-width="1"/>
+      <text x="58" y="248" font-size="13" font-weight="600" fill="#7A271A">④ 连接池 · 24 个槽位</text>
+      <text x="58" y="265" font-size="11.5" fill="#A33A2C">拿不到连接就只能排队</text>
+      <text x="312" y="257" font-size="11.5" font-weight="600" fill="#B42318">堵点①：24 个槽位全被占满，请求排队</text>
+
+      <path d="M165 276 L165 286" stroke="#B42318" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+      <rect x="40" y="288" width="250" height="44" rx="9" fill="#FEF3F2" stroke="#B42318" stroke-width="1"/>
+      <text x="58" y="306" font-size="13" font-weight="600" fill="#7A271A">⑤ MySQL 执行引擎</text>
+      <text x="58" y="323" font-size="11.5" fill="#A33A2C">真正干活的地方</text>
+      <text x="312" y="315" font-size="11.5" font-weight="600" fill="#B42318">堵点②：一条 SQL 15.4 秒，扫 2022 万行</text>
+
+      <path d="M165 334 L165 344" stroke="#9AA6B8" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+      <rect x="40" y="346" width="250" height="44" rx="9" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+      <text x="58" y="364" font-size="13" font-weight="600" fill="#0F6E56">⑥ Buffer Pool · 4G 内存</text>
+      <text x="58" y="381" font-size="11.5" fill="#0F6E56">数据平时就住在内存里</text>
+      <text x="312" y="373" font-size="11.5" fill="#3D4757">4G 装得下 4.5G 的库，热数据命中内存</text>
+
+      <path d="M165 392 L165 402" stroke="#B4B2A9" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+      <rect x="40" y="404" width="250" height="44" rx="9" fill="#F1EFE8" stroke="#888780" stroke-width="0.5"/>
+      <text x="58" y="422" font-size="13" font-weight="600" fill="#5F5E5A">⑦ 磁盘</text>
+      <text x="58" y="439" font-size="11.5" fill="#5F5E5A">只有当内存里没有才读盘</text>
+      <text x="312" y="431" font-size="11.5" fill="#6B7686">全程几乎空闲——加盘、加内存都治不了</text>
+
+      <text x="340" y="476" text-anchor="middle" font-size="11.5" fill="#6B7686">红色 = 本次真正堵住的两站；灰色 = 看起来可疑但实际没参与</text>
+    </svg>
+    <figcaption>图 1　一条请求的七个环节：真正会「变慢」的只有 ④ 和 ⑤，其余都只是「排队」</figcaption>
+  </figure>
+
+  <div class="callout">
+    <h4>三句话看懂全图</h4>
+    <p>一、<b>只有 ④ 和 ⑤ 会让请求变慢</b>，其他站再忙也只是排队——所以「服务器 CPU 才用一半」和「接口很慢」可以同时成立。<br>
+    二、<b>24 个槽位 ÷ 每车停 1.57 秒 ≈ 每秒过 15 辆车</b>，这就是实测到的 15.31 RPS 饱和点，一分不差。<br>
+    三、<b>本次不是机器不够，是 24 个车位被 15 秒的慢车占满了</b>——修好那辆车，吞吐直接上一个数量级。</p>
+  </div>
+
+  <h3 style="font-size:16px;margin:28px 0 10px">这份手册怎么用</h3>
+  <table>
+    <tr><th>你的处境</th><th>从哪读</th><th>要多久</th></tr>
+    <tr><td>只想搞清楚这次事故</td><td><a class="xref" href="#s0">零</a> → <a class="xref r" href="#C1">C1 放大链</a> → <a class="xref g" href="#F1">F1 四项改动</a></td><td>10 分钟</td></tr>
+    <tr><td>要学会自己压测</td><td><a class="xref" href="#s1">一 · 怎么测</a> 全章 → <a class="xref" href="#T7">T7 归因</a></td><td>30 分钟</td></tr>
+    <tr><td>线上已经慢了，要救火</td><td><a class="xref r" href="#s3">三 · 现象 → 动作</a>，按现象查表</td><td>3 分钟</td></tr>
+    <tr><td>要做架构决策</td><td><a class="xref p" href="#s6">六 · 专业做法</a> → <a class="xref" href="#s7">七 · 容量结论</a></td><td>25 分钟</td></tr>
+  </table>
+
+  <div class="callout warn">
+    <h4>先记住一句话</h4>
+    <p><b>压测的目的不是「跑出一个最大数字」，而是「定位到某一层，并证明改这里有用」。</b>跑不出结论的压测，跑一百次也只是在制造数据垃圾。</p>
+  </div>
+</section>
+<section id="s1">
+  <h2 class="chap"><span class="no">一</span>怎么测：六步走完一次有效压测</h2>
+  <p class="chap-intro">大多数压测之所以没用，是因为跳过了第 1 步和第 3 步——上来就加并发，跑完只有一个数字，既不知道为什么，也不知道该改哪。这六步是一条固定的流水线，每一步都有明确产出，少一步结论就站不住。</p>
+
+  <table>
+    <tr><th>步骤</th><th>做什么</th><th>产出</th><th>跳过会怎样</th></tr>
+    <tr><td><b>1 定目标</b></td><td>这次要回答哪个问题</td><td>一句话假设</td><td>跑完不知道结论算不算数</td></tr>
+    <tr><td><b>2 冒烟</b></td><td>1 个请求验证脚本与认证</td><td>能跑通</td><td>后面几百个请求全是 401</td></tr>
+    <tr><td><b>3 单发基准</b></td><td>1 并发跑 N 次</td><td>「不排队时多快」</td><td><b>分不清「接口慢」还是「排队」</b></td></tr>
+    <tr><td><b>4 容量探测</b></td><td>开环，固定速率阶梯上升</td><td>饱和点 RPS</td><td>不知道上限在哪</td></tr>
+    <tr><td><b>5 用户旅程</b></td><td>闭环，N 个用户带思考时间</td><td>「N 人时多难受」</td><td>无法换算成在线人数</td></tr>
+    <tr><td><b>6 同步采指标</b></td><td>压测同时采服务器数据</td><td>归因证据</td><td><b>只有结果没有原因</b></td></tr>
+  </table>
+
+  <ul class="tree">
+
+    <li id="T1" class="c-blue">
+      <div class="lv1"><span class="code">T1</span><h3>先定目标：这次压测要回答哪个问题</h3><span class="goal">5 分钟 · 收益 极高</span></div>
+      <p class="plain"><b>说白了：</b>压测就像体检，你得先说要查什么。查心脏和查骨密度用的设备完全不一样，压测也一样——想找容量上限和想看用户体验，脚本都得换一个。</p>
+      <p class="def">一次压测最多回答一个问题。目标定错，后面所有工作都是在制造数据垃圾。</p>
+      <ul class="sub">
+        <li><b>1.1 三个可选目标，选一个</b>
+          <ul>
+            <li><b>能撑多少人</b>（容量）→ 用开环，固定速率往上加，看在哪崩</li>
+            <li><b>用户体验如何</b>（体感）→ 用闭环，模拟 N 个真实用户</li>
+            <li><b>哪里是瓶颈</b>（归因）→ 任意脚本 + 服务器指标，重点是第 6 步</li>
+          </ul>
+        </li>
+        <li><b>1.2 写一句可验证的假设</b>
+          <ul>
+            <li><b class="mk no">×</b> 「看看服务器能撑多少」——不可验证</li>
+            <li><b class="mk yes">✓</b> 「如果瓶颈是连接池，那么吞吐应等于 24 ÷ 单次查询耗时」——可验证，而且这次验证成功了</li>
+          </ul>
+        </li>
+        <li><b>1.3 划清边界</b>
+          <ul>
+            <li>只压只读接口；<b>不碰下注、充值、提现</b>——每一笔都是真实流水</li>
+            <li>「我是庄家所以能压」是错的：200 并发就是每秒 200 笔真实订单，事后对账成本远高于收益</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#T4">T4 开环</a> · <a class="xref" href="#T5">T5 闭环</a> · <a class="xref" href="#P2">P2 吞吐卡在固定数字</a></div>
+    </li>
+
+    <li id="T2" class="c-blue">
+      <div class="lv1"><span class="code">T2</span><h3>冒烟：用一个请求验证整条链路</h3><span class="goal">2 分钟 · 必做</span></div>
+      <p class="plain"><b>说白了：</b>先派一个人走一遍路，确认门能开、电梯能用，再让一千个人一起走。</p>
+      <p class="def">冒烟不测性能，只测「通不通」。它失败的原因永远只有三类：地址错、认证错、断言错。</p>
+      <ul class="sub">
+        <li><b>2.1 要验证的四件事</b>
+          <ul>
+            <li>目标可达：<code>curl -I</code> 返回 200</li>
+            <li>认证有效：不是 401，且返回里有真实数据</li>
+            <li>断言正确：<b>校验业务码，不只是 HTTP 200</b></li>
+            <li>参数正确：路径、query、body 与前端抓包一致</li>
+          </ul>
+        </li>
+        <li><b>2.2 玩家端的三个特殊点（最容易错）</b>
+          <ul>
+            <li>token 在 localStorage 的键名是 <code>Authorization</code></li>
+            <li>请求头是<b>裸 JWT，不带 <code>Bearer</code> 前缀</b>——加了直接 401</li>
+            <li>路径前缀是 <code>/api/piSportsapi/</code>，不是后台的 <code>/prod-api/</code></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#P9">P9 全部 401</a> · <a class="xref" href="#T3">T3 单发基准</a></div>
+    </li>
+
+    <li id="T3" class="c-blue">
+      <div class="lv1"><span class="code">T3</span><h3>单发基准：全流程最值钱的一步</h3><span class="goal">3 分钟 · 决定后面所有判断</span></div>
+      <p class="plain"><b>说白了：</b>先量一下「一个人走这条路要多久」。如果一个人走都要 15 秒，那一千个人当然更慢，但慢的原因是路本身堵，不是人多。</p>
+      <p class="def">1 个并发跑 30 次，拿到这个接口在「完全没有竞争」时的真实耗时。这个数字是后面所有判断的标尺。</p>
+      <ul class="sub">
+        <li><b>3.1 两种结果的解读完全不同</b>
+          <ul>
+            <li><b>单发 15 秒，并发后还是 15 秒</b> → 接口本身慢，去查 <a class="xref r" href="#B2">B2 SQL 执行</a></li>
+            <li><b>单发 50ms，并发后变 8 秒</b> → 在排队，去查 <a class="xref r" href="#B1">B1 连接池</a></li>
+          </ul>
+        </li>
+        <li><b>3.2 本次的数据</b>
+          <ul>
+            <li>播报接口单发就要十几秒，并发后 p95 8.91 秒——<b>属于第一类，接口本身病重</b></li>
+            <li>这也解释了为什么预热阶段只有 8.68 RPS 却已经 8.91 秒延迟</li>
+          </ul>
+        </li>
+      </ul>
+      <pre><code><span class="cm"># 1 VU × 30 次，只看这一个接口</span>
+k6 run single-probe.js -e TARGET=feed</code></pre>
+      <div class="rel">关联：<a class="xref" href="#B1">B1 连接池</a> · <a class="xref" href="#B2">B2 SQL 执行</a> · <a class="xref" href="#P1">P1 接口慢但 CPU 不高</a></div>
+    </li>
+
+    <li id="T4" class="c-blue">
+      <div class="lv1"><span class="code">T4</span><h3>容量探测：开环压测，找饱和点</h3><span class="goal">10 分钟 · 得出 RPS 上限</span></div>
+      <p class="plain"><b>说白了：</b>开环就是「不管里面多挤，我每秒固定往里塞 10 个人、20 个人、30 个人」。塞到某一档，里面处理不过来了，队伍开始无限变长——那一档就是上限。</p>
+      <p class="def">用固定到达率（arrival rate）逐档上升。系统变慢时<b>发起速率不变</b>，所以能真正把系统压到饱和，暴露出上限。</p>
+      <ul class="sub">
+        <li><b>4.1 三档足够，不用打满</b>
+          <ul>
+            <li>低档（10 RPS）→ 中档（30）→ 高档（60），每档保持 60 秒</li>
+            <li>一旦失败率飙升或延迟崩坏，立即熔断，别在死掉的那一档白等</li>
+          </ul>
+        </li>
+        <li><b>4.2 关键配置</b>
+          <ul>
+            <li><code>ramping-arrival-rate</code> 执行器，<code>preAllocatedVUs</code> 留够余量</li>
+            <li><code>abortOnFail</code>：失败率 &gt; 5% 立刻停</li>
+            <li><code>summaryTrendStats</code> 必须显式加 <code>p(99)</code>，否则汇总函数会崩</li>
+          </ul>
+        </li>
+        <li><b>4.3 本次结果</b>
+          <ul>
+            <li>15.31 RPS 熔断——低得反常，直接说明「有东西在长时间占用资源」</li>
+            <li>后续用 <a class="xref" href="#B6">B6 Little's Law</a> 验证：24 ÷ 1.57 = 15.31，完全吻合</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#T5">T5 闭环</a> · <a class="xref" href="#B6">B6 吞吐公式</a> · <a class="xref" href="#P2">P2 吞吐卡在固定数字</a></div>
+    </li>
+
+    <li id="T5" class="c-blue">
+      <div class="lv1"><span class="code">T5</span><h3>用户旅程：闭环压测，看真实体感</h3><span class="goal">10 分钟 · 换算在线人数</span></div>
+      <p class="plain"><b>说白了：</b>闭环就是「放 200 个人进去，各自逛各自的，看一个页面等几秒，再点下一个」。这更像真实用户，但数字不能当容量用——因为人会自动变慢，系统越慢，他们发请求越慢。</p>
+      <p class="def">固定并发用户数（VU），每个 VU 循环执行一串接口，中间加 1~3 秒思考时间。</p>
+      <ul class="sub">
+        <li><b>5.1 为什么闭环数字不能当容量</b>
+          <ul>
+            <li>闭环的 RPS 永远等于「并发 ÷ 平均延迟」，这是<b>恒等式</b>，系统再慢都成立</li>
+            <li>本次：200 VU ÷ 6.68 秒 ≈ 29.9 RPS，实测 29.93——不是服务器变强了，是用户在等</li>
+          </ul>
+        </li>
+        <li><b>5.2 它真正能回答什么</b>
+          <ul>
+            <li>「200 人在线时，每个人体感几秒」→ 用于换算成业务能理解的在线人数</li>
+            <li>本次结论：200 人时 p95 7.29 秒，明显卡</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#T4">T4 开环</a> · <a class="xref" href="#K1">K1 容量结论</a> · <a class="xref" href="#B6">B6 吞吐公式</a></div>
+    </li>
+
+    <li id="T6" class="c-blue">
+      <div class="lv1"><span class="code">T6</span><h3>同步采指标：没有它，压测只有结果没有原因</h3><span class="goal">压测同时跑 · 不可省</span></div>
+      <p class="plain"><b>说白了：</b>你看到病人发烧（接口慢），得同时量血压、验血（服务器指标），才知道是感染还是中暑。只看温度计，永远开不出对的药。</p>
+      <p class="def">压测跑的同时，在服务器上采 CPU、内存、连接数、GC、MySQL 状态。两边的数据必须<b>时间对齐</b>，否则无法归因。</p>
+      <ul class="sub">
+        <li><b>6.1 必须采的六类</b>
+          <ul>
+            <li>系统：CPU、load、内存</li>
+            <li>网络：TCP 连接数、ESTABLISHED、TIME_WAIT</li>
+            <li>JVM：线程数、FD 数、堆使用率</li>
+            <li>GC：<code>jstat -gcutil</code> 的 YGC / FGC 次数与停顿</li>
+            <li>MySQL：<b>QPS（Questions 差分）</b>、连接数、活跃线程</li>
+            <li>MySQL：慢查询数、Buffer Pool 命中率、行锁等待</li>
+          </ul>
+        </li>
+        <li><b>6.2 核心判据：每请求查询次数</b>
+          <ul>
+            <li><code>MySQL QPS ÷ k6 RPS</code> = 一个业务请求平均触发几条 SQL</li>
+            <li>1~3 正常；<b>≈30 就是 N+1 查询</b>；远大于 30 可能有定时任务在跑</li>
+          </ul>
+        </li>
+        <li><b>6.3 一个真实踩坑</b>
+          <ul>
+            <li><code>pgrep -f java | head -1</code> 抓到了另一个 Java 进程，整场压测采的都是别人的 GC 数据</li>
+            <li>修法：显式传进程名片段，如 <code>./probe-server.sh out.csv piSports</code></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B5">B5 判据速查表</a> · <a class="xref" href="#P8">P8 每请求查库 30 次</a> · <a class="xref" href="#T7">T7 归因定层</a></div>
+    </li>
+
+    <li id="T7" class="c-blue">
+      <div class="lv1"><span class="code">T7</span><h3>归因定层：把「慢」翻译成「哪一层慢」</h3><span class="goal">压测的终点</span></div>
+      <p class="plain"><b>说白了：</b>压测结束必须能说出一句人话：「慢是因为 24 个连接被 15 秒的 SQL 占住了，改 SQL 就能好」。说不出这句，压测就白跑了。</p>
+      <p class="def">把压测数字和服务器指标放在一起，按 <a class="xref" href="#s2">第二章</a> 的层级表逐条排除，最终落到一层。</p>
+      <ul class="sub">
+        <li><b>7.1 排除顺序：从后往前</b>
+          <ul>
+            <li>先看磁盘（最容易排除）：<code>iostat</code> 空闲 → 不是 IO</li>
+            <li>再看 CPU：mysqld 不满 → 不是算力</li>
+            <li>最后看连接池：active = max 且 pending &gt; 0 → <b>就是它</b></li>
+          </ul>
+        </li>
+        <li><b>7.2 三条证据要互相印证</b>
+          <ul>
+            <li>实测饱和点 15.31 RPS</li>
+            <li>计算值 24 ÷ 1.57 = 15.31</li>
+            <li>慢日志里那条 15.4 秒的 SQL 正好占住连接</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="callout ok" style="margin:14px 0 0">
+        <h4>三条独立证据指向同一个结论，才可以动手改</h4>
+        <p>只有一条证据时，那叫猜测。三条互相印证时，才叫定位。</p>
+      </div>
+      <div class="rel">关联：<a class="xref" href="#s2">二 · 四层瓶颈</a> · <a class="xref" href="#s3">三 · 现象 → 动作</a></div>
+    </li>
+
+  </ul>
+</section>
+<section id="s2">
+  <h2 class="chap"><span class="no">二</span>怎么判：四层瓶颈，先撞哪层算哪层</h2>
+  <p class="chap-intro">「瓶颈是磁盘还是数据库」这个问题问错了——它不是二选一，而是一条流水线，<b>前面堵了，后面根本轮不到被打满</b>。所以判断的顺序永远是「从后往前排除」：先证明磁盘没问题，再证明 CPU 没问题，剩下的就是真凶。</p>
+
+  <div class="callout">
+    <h4>为什么顺序是反的</h4>
+    <p>请求的路径是「线程 → 连接池 → MySQL → Buffer Pool → 磁盘」。<b>越靠前越先堵</b>。所以看到「MySQL 不忙但接口很慢」，答案一定在前面，而不是后面。</p>
+  </div>
+
+  <ul class="tree">
+
+    <li id="B0" class="c-warn">
+      <div class="lv1"><span class="code">B0</span><h3>第 0 层：先排除网络与链路</h3><span class="goal">成本 5 分钟 · 先做这个</span></div>
+      <p class="plain"><b>说白了：</b>在你怀疑服务器之前，先确认「你量到的延迟里，有多少是路上花的」。从家里开车去公司堵了两小时，不能怪公司电梯慢。</p>
+      <p class="def">发起端与被测服务之间的每一跳都会加延迟。链路问题会伪装成「服务器慢」，而且最容易误导人。</p>
+      <ul class="sub">
+        <li><b>0.1 三个证据说明你在测链路，不是测服务器</b>
+          <ul>
+            <li><code>ping</code> 返回 0ms、<code>connect</code> 1ms——真实跨境 RTT 不可能这么低，说明被本地代理截获了</li>
+            <li>失败模式是 <code>conn=0 wait=15000</code>——连接都没建立起来，不是应用慢</li>
+            <li>同环境 <code>curl</code> 并发 20 全部 200——链路本身没问题，是压测工具的连接建立环节</li>
+          </ul>
+        </li>
+        <li><b>0.2 正确做法</b>
+          <ul>
+            <li>把压测工具装到<b>服务器本机</b>，打 <code>127.0.0.1</code>，彻底消掉网络变量</li>
+            <li>本机跑会与应用抢 CPU，但 12 核机器上 k6 只占 1~2 核，换来「零网络噪声」非常划算</li>
+          </ul>
+        </li>
+        <li><b>0.3 一个真实教训</b>
+          <ul>
+            <li>第一轮压测从本机公网发起，得出 78.1 RPS——那是「本机到服务器的链路极限」，与服务器容量毫无关系</li>
+            <li>第二轮换到服务器本机，数字变成 15.31 RPS，<b>反而更低</b>，因为这次压的是真实业务接口而不是静态文件</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B1">B1 连接池</a> · <a class="xref" href="#P9">P9 全 401 / 0 RPS</a></div>
+    </li>
+
+    <li id="B1" class="c-red">
+      <div class="lv1"><span class="code">B1</span><h3>第 1 层：应用连接池（最会伪装的瓶颈）</h3><span class="goal">本次真凶之一</span></div>
+      <p class="plain"><b>说白了：</b>连接池就是应用门口的<b>24 个停车位</b>。每来一个请求，得先停一辆车（拿一个连接）才能进去办事。如果某辆车进去 15 秒还不出来，后面 23 个车位也陆续被占满，第 25 个人就只能在门口排队——这时候你会觉得「整个停车场很慢」，其实只是车位不够用。</p>
+      <p class="def">Hikari 只有 24 个连接。连接被长时间占用时，新请求在应用内部排队，等满 <code>connection-timeout</code>（本项目 20 秒）就抛异常。它最会伪装，因为症状看起来完全像「数据库慢」。</p>
+      <ul class="sub">
+        <li><b>1.1 五个识别指纹</b>
+          <ul>
+            <li><b>中位数（med）也高</b>，不只是 p95——说明全体在排队，不是少数慢</li>
+            <li>应用 CPU 低、MySQL CPU 也不满，但就是慢 → 一定在等</li>
+            <li>延迟随并发线性上升——典型队列行为</li>
+            <li>失败信息是 <code>connection-timeout</code>，不是 5xx</li>
+            <li><b>吞吐恰好等于「池大小 ÷ 平均占用时间」</b>——决定性证据</li>
+          </ul>
+        </li>
+        <li><b>1.2 怎么确认</b>
+          <ul>
+            <li><code>hikaricp_connections_active</code> 一直等于 <code>maximum-pool-size</code></li>
+            <li><code>hikaricp_connections_pending</code> 持续大于 0 ← 关键</li>
+            <li><code>hikaricp_connections_timeout_total</code> 持续增长</li>
+          </ul>
+        </li>
+        <li><b>1.3 为什么「调大连接池」是错的</b>
+          <ul>
+            <li>池子满不是原因，是结果——它满了是因为连接被长时间占用</li>
+            <li>调大只是让更多请求同时冲进 MySQL，把「应用排队」换成「数据库内部争用」，症状变了病没治</li>
+            <li>48 个线程一起做全表扫描，MySQL 的 mutex 和 CPU 争用上升，<b>吞吐可能不升反降</b></li>
+          </ul>
+        </li>
+        <li><b>1.4 正确解法（按性价比）</b>
+          <ul>
+            <li>① 缩短单次占用时间 → 改 SQL、修索引</li>
+            <li>② 减少查库次数 → 加缓存（本次就是这么做的）</li>
+            <li>③ 故障隔离 → 慢接口用独立连接池，别把主业务的 24 个全吃掉</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B6">B6 吞吐公式</a> · <a class="xref" href="#P1">P1 接口慢但 CPU 不高</a> · <a class="xref" href="#P3">P3 中位数也高</a> · <a class="xref" href="#A7">A7 隔离舱</a></div>
+    </li>
+
+    <li id="B2" class="c-red">
+      <div class="lv1"><span class="code">B2</span><h3>第 2 层：SQL 执行引擎（逻辑读才是大头）</h3><span class="goal">本次真凶之二</span></div>
+      <p class="plain"><b>说白了：</b>数据库里有一本 2022 万页的账本。你要找 61 条记录，正常做法是翻目录（索引）直接跳到那几页；但如果你把「书名」改写了一遍再去对目录，目录对不上，就只能从第一页开始一页页翻——翻了 2022 万页，最后只抄出 61 条。</p>
+      <p class="def">「数据库慢」通常不是磁盘慢，而是<b>读的行数太多</b>。这些读发生在内存（Buffer Pool）里，消耗的是 CPU，不是 IO。</p>
+      <ul class="sub">
+        <li><b>2.1 逻辑读 vs 物理读，一定分清</b>
+          <ul>
+            <li><b>逻辑读</b>：在内存里翻页，指标是 <code>Rows_examined</code>、<code>Innodb_buffer_pool_read_requests</code>；单次便宜，两千万次就贵</li>
+            <li><b>物理读</b>：真的读盘，指标是 <code>Innodb_buffer_pool_reads</code>；单次很贵</li>
+            <li>本次：扫描 2022 万行（逻辑读），返回 61 行，<b>有效率 0.0003%</b></li>
+          </ul>
+        </li>
+        <li><b>2.2 五种常见病</b>
+          <ul>
+            <li>全表扫描：<code>EXPLAIN</code> 里 <code>type=ALL</code>，<code>rows</code> 巨大</li>
+            <li><b>索引失效</b>：明明有索引却没走（本次就是这个）→ 见 <a class="xref r" href="#C2">C2</a></li>
+            <li>临时表 / 文件排序：<code>Using temporary</code>、<code>Using filesort</code></li>
+            <li>N+1 查询：一个请求查 30 次库 → 见 <a class="xref r" href="#P8">P8</a></li>
+            <li>锁等待：<code>Lock_time</code> 高（本次接近 0，正好排除了这一项）</li>
+          </ul>
+        </li>
+        <li><b>2.3 排查顺序</b>
+          <ul>
+            <li><b>先看慢日志</b>（比看任何监控曲线都快）→ 找到 Top SQL</li>
+            <li><code>EXPLAIN</code> 看它到底走没走索引</li>
+            <li>改 SQL 或改配置，<b>最后才考虑加索引</b></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#C2">C2 CONVERT 废索引</a> · <a class="xref" href="#C5">C5 慢日志三铁证</a> · <a class="xref" href="#P4">P4 有索引仍全表扫</a> · <a class="xref" href="#P5">P5 数据库 CPU 打满</a></div>
+    </li>
+
+    <li id="B3" class="c-warn">
+      <div class="lv1"><span class="code">B3</span><h3>第 3 层：磁盘 IO（什么时候它才是真凶）</h3><span class="goal">本次完全未参与</span></div>
+      <p class="plain"><b>说白了：</b>内存是手边的书架，磁盘是楼下的仓库。只要常用的书都摆在书架上，你根本不用下楼。只有当书架放不下、或者你要搬一大堆新书进去时，仓库才会成为瓶颈。</p>
+      <p class="def">磁盘确实会成为瓶颈，但要满足特定条件。在 L1/L2 的问题上修磁盘，是白花钱。</p>
+      <ul class="sub">
+        <li><b>3.1 三个触发条件</b>
+          <ul>
+            <li>工作集 &gt; Buffer Pool：热数据装不进内存，每次查询都读盘</li>
+            <li>写入量过大：redo log fsync、doublewrite、脏页刷盘跟不上</li>
+            <li>大批量操作：DDL、大事务、备份、统计任务</li>
+          </ul>
+        </li>
+        <li><b>3.2 判定指标</b>
+          <ul>
+            <li><code>iostat -x 1</code>：<code>%util &gt; 80</code> 且 <code>await</code> 持续升高 → 磁盘饱和</li>
+            <li>Buffer Pool 命中率 = 1 − <code>reads / read_requests</code>，<b>低于 99% 说明内存不够</b></li>
+          </ul>
+        </li>
+        <li><b>3.3 本次的数据</b>
+          <ul>
+            <li>Buffer Pool 4G vs 库 4.5G —— 几乎能全装下</li>
+            <li><code>Lock_time</code> 0.000007 秒，扫描全是逻辑读</li>
+            <li><b>结论：加 SSD、扩内存对这个案例毫无帮助</b></li>
+          </ul>
+        </li>
+        <li><b>3.4 但将来该调的地方</b>
+          <ul>
+            <li>47G 内存只给了 4G Buffer Pool，库长大了这里是第一个该调的</li>
+            <li>经验值：设为可用内存的 60~70%，且要能装下热数据</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#P6">P6 磁盘 %util 高</a> · <a class="xref" href="#B5">B5 判据速查表</a></div>
+    </li>
+
+    <li id="B4" class="c-warn">
+      <div class="lv1"><span class="code">B4</span><h3>第 4 层：GC 与内存（独立于前三层）</h3><span class="goal">常被忽略</span></div>
+      <p class="plain"><b>说白了：</b>GC 就是「房间满了要打扫」。打扫的时候不能干活，所以哪怕 CPU 很闲，请求也会突然停住几百毫秒。它的特征是「偶发尖刺」，不是「持续变慢」。</p>
+      <p class="def">GC 停顿会直接变成接口延迟的尖刺，尤其影响 p99。它与数据库无关，是一条独立的排查线。</p>
+      <ul class="sub">
+        <li><b>4.1 判断信号</b>
+          <ul>
+            <li><code>jstat -gcutil &lt;pid&gt; 1000</code>：FGC 次数持续增长、FGC 停顿累计变长</li>
+            <li>p99 很高但 p50 正常 → 典型的「偶发停顿」</li>
+            <li>堆使用率长期贴着上限（95%+）</li>
+          </ul>
+        </li>
+        <li><b>4.2 常见原因</b>
+          <ul>
+            <li>堆设置过小，或对象分配速率过高（大量临时对象）</li>
+            <li>一次查出几十万行塞进内存（本次 SQL 若返回大量行就会这样）</li>
+            <li>缓存无上限，把内存当硬盘用</li>
+          </ul>
+        </li>
+        <li><b>4.3 注意</b>
+          <ul>
+            <li>虚拟线程会显著增加对象分配量，<b>请求变快、QPS 上升后 GC 可能成为新瓶颈</b></li>
+            <li>修复后复测时要专门看这一项</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#P7">P7 Full GC 频繁</a> · <a class="xref" href="#B5">B5 判据速查表</a></div>
+    </li>
+
+    <li id="B5" class="c-blue">
+      <div class="lv1"><span class="code">B5</span><h3>判据速查表：一分钟定位到层</h3><span class="goal">贴在显示器边上</span></div>
+      <p class="plain"><b>说白了：</b>这是一张「症状 → 科室」的分诊表。急诊不给你做全身检查，先按症状分到对应科室，再细查。</p>
+      <p class="def">按顺序逐条排除，找到第一个打满的就停下来，先把那层解决。解决了再回来，往往发现后面几层根本不是问题。</p>
+      <table style="margin-top:10px">
+        <tr><th>现象组合</th><th>判定</th><th>下一步命令</th></tr>
+        <tr><td>CPU 低 + 中位数高 + 连接数打满</td><td><b>B1 连接池</b></td><td><code>hikaricp_connections_pending</code></td></tr>
+        <tr><td>mysqld CPU 高 + 慢日志增长</td><td><b>B2 SQL 执行</b></td><td><code>SHOW FULL PROCESSLIST</code> + <code>EXPLAIN</code></td></tr>
+        <tr><td><code>iostat %util</code> 高 + 命中率低</td><td><b>B3 磁盘</b></td><td><code>iostat -x 1</code></td></tr>
+        <tr><td>FGC 频繁 + 停顿长</td><td><b>B4 GC</b></td><td><code>jstat -gcutil</code></td></tr>
+        <tr><td>QPS ÷ RPS 异常高</td><td><b>N+1 查询</b></td><td>看该接口 SQL 条数</td></tr>
+        <tr><td>全 401 / 0 RPS / 服务器无压力</td><td><b>token 问题</b></td><td>解 JWT 看 <code>exp</code></td></tr>
+      </table>
+      <ul class="sub">
+        <li><b>关键指标的健康值</b>
+          <ul>
+            <li>Buffer Pool 命中率 &gt; 99% ｜ <code>%util</code> &lt; 70% ｜ QPS ÷ RPS 在 1~3</li>
+            <li>Full GC 接近 0 ｜ <code>Lock_time</code> 接近 0 ｜ 每 VU 产出不随并发下降</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#T6">T6 同步采指标</a> · <a class="xref" href="#s3">三 · 现象 → 动作</a></div>
+    </li>
+
+    <li id="B6" class="c-purple">
+      <div class="lv1"><span class="code">B6</span><h3>吞吐公式：一个等式解释「为什么加人没用」</h3><span class="goal">本次最核心的洞察</span></div>
+      <p class="plain"><b>说白了：</b>停车场每小时能过多少车 = 车位数 ÷ 每辆车停多久。24 个车位、每车停 1.57 分钟，那每小时就只能过 15 辆车。<b>你想多过车，要么加车位，要么让车停短一点</b>——而让车停短一点，效果远好于加车位。</p>
+      <p class="def">这就是排队论里的 Little's Law：系统中的请求数 = 到达率 × 平均停留时间。反过来就是吞吐上限。</p>
+      <ul class="sub">
+        <li><b>6.1 套进本次案例</b>
+          <ul>
+            <li>槽位 24 个，平均每次占用 1.57 秒 → 24 ÷ 1.57 ≈ <b>15.31 RPS</b></li>
+            <li>实测饱和点正好 15.31 RPS——不是巧合，是必然</li>
+          </ul>
+        </li>
+        <li><b>6.2 三个推论</b>
+          <ul>
+            <li>连接 24 → 48：理论上限翻倍，实际因争用上升到不了 <b class="mk no">×</b></li>
+            <li>停留 1.57s → 0.05s：上限变 480 RPS <b class="mk yes">✓</b></li>
+            <li>缓存命中 90% 不查库：连接池不再是瓶颈 <b class="mk yes">✓</b></li>
+          </ul>
+        </li>
+        <li><b>6.3 反过来估池子大小</b>
+          <ul>
+            <li><code>所需连接 ≈ 目标 RPS × 平均停留时间 × 1.5</code></li>
+            <li>例：100 RPS × 50ms × 1.5 ≈ 8 个就够——所以「1000 用户要 1000 连接」是错的</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B1">B1 连接池</a> · <a class="xref" href="#T4">T4 开环</a> · <a class="xref" href="#C1">C1 放大链</a> · <a class="xref" href="#A7">A7 隔离舱</a></div>
+    </li>
+
+  </ul>
+</section>
+<section id="s3">
+  <h2 class="chap"><span class="no">三</span>怎么办：现象 → 动作 对照手册</h2>
+  <p class="chap-intro">这一章是全文最实用的部分，可以当急诊手册用。左边是你看到的现象（用大白话描述），右边是要做的动作。<b>先按现象找到卡片，照做即可</b>——每张卡片都标了「先查什么、别做什么、对应哪一层」。</p>
+
+  <h3 style="font-size:16px;margin:0 0 12px">速查表：一眼定位</h3>
+  <table>
+    <tr><th>你看到的现象</th><th>先查这一层</th><th>第一个动作</th><th>本次案例</th></tr>
+    <tr><td>接口慢，但 CPU 一半空闲</td><td><a class="xref r" href="#B1">B1 连接池</a></td><td>看 <code>connections_pending</code></td><td><a class="xref" href="#C1">C1</a></td></tr>
+    <tr><td>吞吐卡死在某个数字，加并发不涨</td><td><a class="xref r" href="#B1">B1 连接池</a></td><td>算「池大小 ÷ 占用时间」</td><td><a class="xref" href="#C1">C1</a></td></tr>
+    <tr><td>中位数（p50）就很高</td><td><a class="xref r" href="#B1">B1 连接池</a></td><td>确认是全体排队</td><td><a class="xref" href="#C5">C5</a></td></tr>
+    <tr><td>有索引还是全表扫</td><td><a class="xref r" href="#B2">B2 SQL</a></td><td><code>EXPLAIN</code> 看有没有走</td><td><a class="xref" href="#C2">C2</a></td></tr>
+    <tr><td>数据库 CPU 打满</td><td><a class="xref r" href="#B2">B2 SQL</a></td><td>慢日志找 Top SQL</td><td><a class="xref" href="#C5">C5</a></td></tr>
+    <tr><td>磁盘 <code>%util</code> 80% 以上</td><td><a class="xref" href="#B3">B3 磁盘</a></td><td>看 Buffer Pool 命中率</td><td>—</td></tr>
+    <tr><td>偶发几百毫秒尖刺</td><td><a class="xref" href="#B4">B4 GC</a></td><td><code>jstat -gcutil</code></td><td>—</td></tr>
+    <tr><td>一个请求查 30 次库</td><td><a class="xref r" href="#B2">B2 SQL</a></td><td>查 N+1</td><td>overview 接口</td></tr>
+    <tr><td>全 401，RPS 为 0</td><td>认证</td><td>解 JWT 看 <code>exp</code></td><td>—</td></tr>
+    <tr><td>加了缓存没变快</td><td>缓存本身</td><td>确认真的命中了</td><td><a class="xref" href="#C6">C6</a></td></tr>
+    <tr><td>加了机器没变快</td><td><a class="xref r" href="#B1">B1 连接池</a></td><td>瓶颈在共享资源上</td><td>—</td></tr>
+  </table>
+
+  <ul class="tree">
+
+    <li id="P1" class="c-red">
+      <div class="lv1"><span class="code">P1</span><h3>接口慢，但服务器 CPU 才用一半</h3><span class="goal">最常见 · 最容易误判</span></div>
+      <p class="plain"><b>说白了：</b>餐厅里 12 个厨师，只有 6 个在忙，但客人等了一小时。这说明不是厨师不够，是<b>点菜窗口只有 24 个，而且每单做得特别慢</b>——客人全堵在窗口前。</p>
+      <p class="def">资源没用满却慢，只有一个解释：请求在<b>等</b>，不是在<b>算</b>。等的东西通常是连接、锁、或者某个外部调用。</p>
+      <ul class="sub">
+        <li><b>动作一：确认是不是在等连接</b>
+          <ul>
+            <li>看 <code>hikaricp_connections_active</code> 是否长期等于上限</li>
+            <li>看 <code>hikaricp_connections_pending</code> 是否 &gt; 0</li>
+          </ul>
+        </li>
+        <li><b>动作二：找出谁占着连接不放</b>
+          <ul>
+            <li>MySQL 侧：<code>SHOW FULL PROCESSLIST</code>，看 <code>Time</code> 最大的那条</li>
+            <li>应用侧：看慢日志 Top SQL，或开 SQL 耗时埋点</li>
+          </ul>
+        </li>
+        <li><b>动作三：让它变快，不是让更多人挤进来</b>
+          <ul>
+            <li>改 SQL / 修索引 → 见 <a class="xref" href="#P4">P4</a></li>
+            <li>加缓存让它根本不查库 → 见 <a class="xref" href="#A2">A2</a></li>
+          </ul>
+        </li>
+        <li><b>别做什么</b>
+          <ul>
+            <li><b class="mk no">×</b> 调大连接池（把排队搬进 MySQL）</li>
+            <li><b class="mk no">×</b> 加 CPU / 加内存（瓶颈不在算力）</li>
+            <li><b class="mk no">×</b> 换 SSD（根本没用 IO）</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref r" href="#B1">B1 连接池</a> · <a class="xref" href="#T3">T3 单发基准</a> · <a class="xref" href="#C1">C1 放大链</a></div>
+    </li>
+
+    <li id="P2" class="c-red">
+      <div class="lv1"><span class="code">P2</span><h3>吞吐卡在一个固定数字，加并发也不涨</h3><span class="goal">决定性的信号</span></div>
+      <p class="plain"><b>说白了：</b>你往水管里加多少水，流出来的永远是每分钟 15 升。那说明管子某处有个固定口径的阀门——找到它，就知道该修哪。</p>
+      <p class="def">吞吐出现「天花板」且数值稳定，说明前面有一个<b>固定数量的资源</b>在限流。它一定是某个池子：连接池、线程池、或者信号量。</p>
+      <ul class="sub">
+        <li><b>动作一：用公式反推是哪个池子</b>
+          <ul>
+            <li><code>池大小 ÷ 单次占用时间 = 吞吐上限</code></li>
+            <li>算出来和实测吻合 → 就是它</li>
+            <li>本次：24 ÷ 1.57 = 15.31，实测 15.31 <b class="mk yes">✓</b></li>
+          </ul>
+        </li>
+        <li><b>动作二：验证单次占用时间</b>
+          <ul>
+            <li>单发基准（<a class="xref" href="#T3">T3</a>）告诉你接口本身多慢</li>
+            <li>若单发就 15 秒，那上限自然是 24 ÷ 15 ≈ 1.6 RPS 级别</li>
+          </ul>
+        </li>
+        <li><b>动作三：缩短占用时间</b>
+          <ul>
+            <li>SQL 优化、加缓存、把串行改并行（谨慎）</li>
+            <li>目标：从 1.57 秒降到 50 毫秒，上限直接变 480 RPS</li>
+          </ul>
+        </li>
+        <li><b>别做什么</b>
+          <ul>
+            <li><b class="mk no">×</b> 继续加并发——只会让延迟线性上升，吞吐不动</li>
+            <li><b class="mk no">×</b> 把连接池调大——上限变了但争用也变了，通常到不了理论值</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B6">B6 吞吐公式</a> · <a class="xref" href="#T4">T4 开环</a> · <a class="xref" href="#P11">P11 加机器没变快</a></div>
+    </li>
+
+    <li id="P3" class="c-red">
+      <div class="lv1"><span class="code">P3</span><h3>中位数（p50）也很高，不只是 p95</h3><span class="goal">一眼分清「少数慢」和「全体慢」</span></div>
+      <p class="plain"><b>说白了：</b>p95 高说明「有一小撮人特别惨」；<b>p50 也高说明「一半人都在排队」</b>。前者是某条路坏了，后者是整个入口堵了。</p>
+      <p class="def">中位数代表「普通用户的体验」。它高，说明慢不是个别现象，而是普遍现象——这几乎一定指向共享资源被占满。</p>
+      <ul class="sub">
+        <li><b>怎么读这组数</b>
+          <ul>
+            <li>p50 低、p95 高 → 个别慢请求（慢 SQL、GC 停顿、缓存穿透）</li>
+            <li><b>p50 也高</b> → 全体排队（连接池、线程池、锁）← 本次</li>
+            <li>p50 与 p95 一起随并发线性上升 → 正常饱和排队</li>
+          </ul>
+        </li>
+        <li><b>本次数据</b>
+          <ul>
+            <li>预热阶段只有 8.68 RPS，p95 已 8.91 秒，<b>p50 高达 568 毫秒</b></li>
+            <li>负载很低却全体慢 → 不是容量问题，是有人在长期占用资源</li>
+          </ul>
+        </li>
+        <li><b>动作</b>
+          <ul>
+            <li>直接跳到 <a class="xref" href="#P1">P1</a>，按连接池路径排查</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref r" href="#B1">B1 连接池</a> · <a class="xref" href="#C5">C5 慢日志</a></div>
+    </li>
+
+    <li id="P4" class="c-red">
+      <div class="lv1"><span class="code">P4</span><h3>明明有索引，查询还是全表扫描</h3><span class="goal">最隐蔽 · 本次主因</span></div>
+      <p class="plain"><b>说白了：</b>书有目录，但你在查的时候把书名改写了（比如加了书名号、换了大小写），目录是按原名排的，对不上，你只能从第一页开始翻。</p>
+      <p class="def">索引建在<b>列的原始值</b>上。一旦在列外面包了函数，比较对象变成「函数结果」，索引就对不上了，优化器只能放弃它。</p>
+      <ul class="sub">
+        <li><b>动作一：先确认真的没走索引</b>
+          <ul>
+            <li><code>EXPLAIN</code> 看 <code>type</code> 和 <code>key</code>：<code>type=ALL</code> 或 <code>key=NULL</code> 就是没走</li>
+            <li>不要凭「我建了索引」下结论——<b>建了不等于用了</b></li>
+          </ul>
+        </li>
+        <li><b>动作二：找函数包裹</b>
+          <ul>
+            <li><code>CONVERT(col USING utf8mb4)</code>、<code>DATE(col)</code>、<code>UPPER(col)</code>、<code>col + 0</code></li>
+            <li>本次就是 JOIN 条件两侧各包了一层 <code>CONVERT</code> → 见 <a class="xref r" href="#C2">C2</a></li>
+          </ul>
+        </li>
+        <li><b>动作三：改成范围写法</b>
+          <ul>
+            <li><code>DATE(t) = '2026-11-17'</code> → <code>t &gt;= '2026-11-17' AND t &lt; '2026-11-18'</code></li>
+            <li><code>UPPER(name)='ABC'</code> → 存的时候就存大写，或建函数索引</li>
+          </ul>
+        </li>
+        <li><b>别做什么</b>
+          <ul>
+            <li><b class="mk no">×</b> 直接加新索引——本次索引早就建好了，加重复索引只是浪费写入性能</li>
+            <li><b class="mk no">×</b> 改表字符集——两张表本来就一致，纯属白折腾</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B2">B2 SQL 执行</a> · <a class="xref r" href="#C2">C2 CONVERT</a> · <a class="xref" href="#C3">C3 NOT EXISTS</a></div>
+    </li>
+
+    <li id="P5" class="c-red">
+      <div class="lv1"><span class="code">P5</span><h3>数据库 CPU 打满，应用侧还算正常</h3><span class="goal">典型的 SQL 问题</span></div>
+      <p class="plain"><b>说白了：</b>厨师全在忙，但忙的都是「把整本账本翻一遍找 3 条记录」这种傻活。人手不缺，缺的是方法。</p>
+      <p class="def">mysqld 的 CPU 消耗主要来自逻辑读（翻页、比较、过滤）。扫描行数越多，CPU 越满，而返回的有效数据可能极少。</p>
+      <ul class="sub">
+        <li><b>动作一：慢日志排序</b>
+          <ul>
+            <li>按 <code>Query_time</code> 和 <code>Rows_examined</code> 两个维度分别排</li>
+            <li><b>优先看「扫描行数 ÷ 返回行数」比值最大的</b>，那是效率最差的</li>
+          </ul>
+        </li>
+        <li><b>动作二：算有效产出率</b>
+          <ul>
+            <li>本次：返回 61 行 / 扫描 2022 万行 = <b>0.0003%</b></li>
+            <li>低于 1% 基本都要改</li>
+          </ul>
+        </li>
+        <li><b>动作三：改 SQL 而不是加机器</b>
+          <ul>
+            <li>去掉函数包裹、把相关子查询改点查、缩小时间窗口</li>
+            <li>加机器只是把同样的傻活分给两台机器做</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B2">B2 SQL</a> · <a class="xref" href="#C5">C5 慢日志</a> · <a class="xref" href="#C4">C4 时间窗口</a></div>
+    </li>
+
+    <li id="P6" class="c-warn">
+      <div class="lv1"><span class="code">P6</span><h3>磁盘 %util 到 80% 以上</h3><span class="goal">这时才该考虑加盘</span></div>
+      <p class="plain"><b>说白了：</b>书架放不下，只能不停跑仓库。这时候换一辆更快的货车（SSD）是有用的——但先看看是不是只是书架太小（内存不够）。</p>
+      <p class="def">磁盘饱和通常是「内存不足」的结果，而不是独立的原因。先扩内存往往比换盘便宜且有效。</p>
+      <ul class="sub">
+        <li><b>动作一：先看 Buffer Pool 命中率</b>
+          <ul>
+            <li>低于 99% → 内存不够，先扩 Buffer Pool</li>
+            <li>高于 99% 但 %util 高 → 可能是写入压力（redo、批量任务）</li>
+          </ul>
+        </li>
+        <li><b>动作二：分清读多还是写多</b>
+          <ul>
+            <li>读多：扩 Buffer Pool、加从库</li>
+            <li>写多：看 redo 配置、批量提交、减少大事务</li>
+          </ul>
+        </li>
+        <li><b>动作三：最后才换硬件</b>
+          <ul>
+            <li>NVMe 对随机读写提升明显，但成本高</li>
+            <li>先确认不是「一条烂 SQL 把内存冲爆了」</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B3">B3 磁盘</a> · <a class="xref" href="#B5">B5 判据表</a></div>
+    </li>
+
+    <li id="P7" class="c-warn">
+      <div class="lv1"><span class="code">P7</span><h3>偶发几百毫秒尖刺，p99 很难看</h3><span class="goal">GC 或锁</span></div>
+      <p class="plain"><b>说白了：</b>大部分人一路顺畅，但每隔一会儿全体卡一下——这不像路堵，更像<b>红绿灯</b>。GC 停顿就是这种「全体停一下」。</p>
+      <p class="def">尖刺型延迟（p50 正常、p99 很差）通常来自 GC 停顿、定时任务、连接池瞬时耗尽、或锁等待。</p>
+      <ul class="sub">
+        <li><b>动作一：确认是不是 GC</b>
+          <ul>
+            <li><code>jstat -gcutil &lt;pid&gt; 1000</code>，看 FGC 次数与停顿</li>
+            <li>尖刺时间点与 FGC 时间点对齐 → 就是它</li>
+          </ul>
+        </li>
+        <li><b>动作二：确认不是定时任务</b>
+          <ul>
+            <li>看是否每 30s / 60s 规律出现——那多半是某个定时轮询</li>
+            <li>本次的播报轮询就是这种「规律性压力」</li>
+          </ul>
+        </li>
+        <li><b>动作三：减少对象分配</b>
+          <ul>
+            <li>别一次查几十万行塞内存；缓存加容量上限；避免大对象频繁创建</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B4">B4 GC</a> · <a class="xref" href="#C1">C1 放大链</a></div>
+    </li>
+
+    <li id="P8" class="c-warn">
+      <div class="lv1"><span class="code">P8</span><h3>一个请求查了 30 次库（N+1）</h3><span class="goal">看不出来但很致命</span></div>
+      <p class="plain"><b>说白了：</b>你要查 30 个订单的状态，正常是「一次问清 30 个」，N+1 是「先问有哪些订单，然后一个一个问状态」——30 次往返，每次都占一个连接。</p>
+      <p class="def">现象是「接口不算特别慢，但数据库 QPS 异常高」。判据只有一个：<code>MySQL QPS ÷ 业务 RPS</code>。</p>
+      <ul class="sub">
+        <li><b>动作一：算这个比值</b>
+          <ul>
+            <li>1~3 正常；<b>≈30 就是 N+1</b>；远大于 30 可能有定时任务</li>
+            <li>本项目 <code>wallet-center/overview</code> 正好是 30</li>
+          </ul>
+        </li>
+        <li><b>动作二：改成批量</b>
+          <ul>
+            <li>循环单查 → 一次 <code>IN (...)</code> 查回全部</li>
+            <li>或直接 JOIN 一次取回，注意别放大行数</li>
+          </ul>
+        </li>
+        <li><b>动作三：加缓存</b>
+          <ul>
+            <li>这类「列表 + 明细」组合特别适合缓存整体结果</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#T6">T6 探针</a> · <a class="xref" href="#B2">B2 SQL</a> · <a class="xref" href="#K3">K3 后续工单</a></div>
+    </li>
+
+    <li id="P9" class="c-warn">
+      <div class="lv1"><span class="code">P9</span><h3>全部 401，RPS 是 0，但服务器毫无压力</h3><span class="goal">压测最常见的假故障</span></div>
+      <p class="plain"><b>说白了：</b>这不是性能问题，是<b>钥匙不对</b>。门都没进去，当然不费力气。</p>
+      <p class="def">这个组合（全失败 + 服务器空闲）几乎 100% 是认证或地址问题，不要去查服务器。</p>
+      <ul class="sub">
+        <li><b>动作一：先解 JWT 看 exp</b>
+          <ul>
+            <li>过期了就重新拿一个，别浪费时间查服务器</li>
+          </ul>
+        </li>
+        <li><b>动作二：检查前缀</b>
+          <ul>
+            <li>玩家端是<b>裸 JWT</b>，加了 <code>Bearer </code> 会直接 401</li>
+            <li>后台才是 <code>Bearer &lt;jwt&gt;</code>——两套规则不要混</li>
+          </ul>
+        </li>
+        <li><b>动作三：检查断言</b>
+          <ul>
+            <li>HTTP 200 但业务码非 200 的情况必须单独校验</li>
+            <li>否则会出现「0% 失败但接口全挂」的假绿灯</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#T2">T2 冒烟</a> · <a class="xref" href="#B0">B0 链路</a></div>
+    </li>
+
+    <li id="P10" class="c-ok">
+      <div class="lv1"><span class="code">P10</span><h3>加了缓存，接口却没变快</h3><span class="goal">八成是没命中</span></div>
+      <p class="plain"><b>说白了：</b>你在门口贴了告示「不用进去问」，但每个来的人还是推门进去了——因为告示贴在了门背后。</p>
+      <p class="def">缓存不生效的原因只有三类：没命中、命中率低、或者被绕过（比如 HTTP 头禁止缓存）。</p>
+      <ul class="sub">
+        <li><b>动作一：直接验证命中</b>
+          <ul>
+            <li>连打两次同一接口，第二次应该断崖式变快（&lt; 50ms）</li>
+            <li>如果第二次还是慢，缓存根本没生效</li>
+          </ul>
+        </li>
+        <li><b>动作二：检查是否被绕过</b>
+          <ul>
+            <li>响应头有 <code>Cache-Control: no-store</code> → 浏览器/CDN 都不会缓存</li>
+            <li>请求带了 <code>no-cache</code> → 每次都穿透</li>
+          </ul>
+        </li>
+        <li><b>动作三：检查缓存键与失效</b>
+          <ul>
+            <li>缓存键里带了时间戳 / 随机数 → 永远不命中</li>
+            <li>TTL 设得太短（如 1 秒）→ 等于没有</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#C6">C6 双检锁缓存</a> · <a class="xref" href="#A2">A2 缓存分层</a></div>
+    </li>
+
+    <li id="P11" class="c-purple">
+      <div class="lv1"><span class="code">P11</span><h3>加了一台机器，系统却没变快</h3><span class="goal">瓶颈在共享资源上</span></div>
+      <p class="plain"><b>说白了：</b>你把点菜窗口从 24 个加到 48 个，但厨房只有一个，灶台只有 12 个——窗口再多也没用，人全堵在厨房门口。</p>
+      <p class="def">横向扩容只在「瓶颈资源可以一起扩容」时有效。如果瓶颈是单实例数据库、单点缓存、或全局锁，加应用服务器毫无意义。</p>
+      <ul class="sub">
+        <li><b>动作一：确认瓶颈是否可横向扩展</b>
+          <ul>
+            <li>应用无状态 → 可扩容 <b class="mk yes">✓</b></li>
+            <li>单实例 MySQL → 不可扩容 <b class="mk no">×</b>（除非读写分离/分片）</li>
+          </ul>
+        </li>
+        <li><b>动作二：算总连接数会不会超</b>
+          <ul>
+            <li>2 台应用 × 24 连接 = 48，仍在 <code>max_connections=200</code> 内</li>
+            <li>但如果 10 台就是 240，直接超过上限 → 必须重新算</li>
+          </ul>
+        </li>
+        <li><b>动作三：先修共享瓶颈</b>
+          <ul>
+            <li>先把 SQL 修好、把缓存加上，再谈扩容</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B1">B1 连接池</a> · <a class="xref" href="#A3">A3 读写分离</a> · <a class="xref" href="#A6">A6 分库分表</a></div>
+    </li>
+
+  </ul>
+</section>
+<section id="s4">
+  <h2 class="chap"><span class="no">四</span>实战复盘：这次到底坏在哪</h2>
+  <p class="chap-intro">这一章是完整证据链。它值得细读，因为它展示了一个很典型的现象：<b>四个单独看都不致命的因素，叠在一起就变成了全站故障</b>。这类「组合故障」靠看单个模块永远找不到。</p>
+
+  <div class="callout bad">
+    <h4>一句话版本</h4>
+    <p>首页挂了个中奖播报组件 → 每个在线用户各开一个定时器轮询 → 打到免登录的匿名接口 → 后端零缓存每次真查库 → 那条 SQL 因为两处 <code>CONVERT</code> 废掉了索引 → 全表扫 2022 万行耗时 15.4 秒 → 24 个连接被逐个占满 → 全站所有请求开始排队。</p>
+  </div>
+
+  <ul class="tree">
+
+    <li id="C1" class="c-red">
+      <div class="lv1"><span class="code">C1</span><h3>四个放大器相乘：为什么小问题会变成大故障</h3><span class="goal">核心认知</span></div>
+      <p class="plain"><b>说白了：</b>一个人每 10 秒问一次「现在谁中奖了」，很正常；但如果<b>一千个人各自问、而且每次都要翻 2022 万页账本、还谁都能问不用买票</b>——那就不是「问一句」的事了。</p>
+      <p class="def">单独看每个因素都合理，叠在一起才致命。这是「组合故障」的典型样本。</p>
+      <ul class="sub">
+        <li><b>1.1 四个因素</b>
+          <ul>
+            <li><b>每用户独立轮询</b>：成本 = 在线用户数，用户越多压力越大</li>
+            <li><b><code>@NoToken</code> 匿名可达</b>：连爬虫、压测工具都能触发，不需要登录</li>
+            <li><b>零缓存</b>：<code>noStore()</code> + 服务端无缓存，每个请求必然穿透到数据库</li>
+            <li><b>单次查询 15.4 秒</b>：一条待优化的 SQL</li>
+          </ul>
+        </li>
+        <li><b>1.2 量化一下</b>
+          <ul>
+            <li>100 个在线用户、轮询间隔 10 秒 → 每秒 10 个播报请求</li>
+            <li>每个占用连接 1.57 秒 → 稳态占用 <b>15.7 个连接</b></li>
+            <li>24 个里被吃掉 15.7 个，只剩 8 个给全站其他功能</li>
+          </ul>
+        </li>
+        <li><b>1.3 这是正反馈系统</b>
+          <ul>
+            <li>慢查询占住连接 → 其他请求排队 → 队列变长 → 超时重试 → 更多请求 → 更慢</li>
+            <li>所以故障来得很突然：平时看着还行，某个临界点一过就整体崩</li>
+          </ul>
+        </li>
+        <li><b>1.4 正确的设计应该是什么样</b>
+          <ul>
+            <li>前端：轮询间隔拉长、页面不可见时暂停、失败指数退避</li>
+            <li>接口：允许缓存 <code>max-age=30</code>，别用 <code>noStore</code></li>
+            <li>服务端：结果缓存 → 见 <a class="xref g" href="#C6">C6</a></li>
+            <li>架构：播报这类接口用独立连接池 → 见 <a class="xref p" href="#A7">A7</a></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B6">B6 吞吐公式</a> · <a class="xref" href="#P1">P1 接口慢 CPU 不高</a> · <a class="xref p" href="#A7">A7 隔离舱</a></div>
+    </li>
+
+    <li id="C2" class="c-red">
+      <div class="lv1"><span class="code">C2</span><h3>CONVERT 包列：最隐蔽的索引杀手</h3><span class="goal">本次主因 · 值得背下来</span></div>
+      <p class="plain"><b>说白了：</b>目录是按「书名原文」排的。你查的时候先把书名翻译成另一种写法再去对目录，目录当然对不上——只能从第一页开始翻。</p>
+      <p class="def">在 JOIN 列外面包一层 <code>CONVERT</code>，等于让比较发生在「函数结果」上，索引彻底失效。</p>
+      <ul class="sub">
+        <li><b>2.1 问题代码</b></li>
+      </ul>
+      <pre><code><span class="cm">-- 修复前：两侧各包一层 CONVERT</span>
+JOIN bet_order_state_log settled_log
+  ON <span class="del">CONVERT(settled_log.aggregate_no USING utf8mb4)</span>
+   = <span class="del">CONVERT(b.aggregate_no USING utf8mb4)</span>
+ AND settled_log.to_status = 'SETTLED'</code></pre>
+      <ul class="sub">
+        <li><b>2.2 为什么索引会失效</b>
+          <ul>
+            <li>索引是建在<b>列本身</b>上的 B+ 树，按原始值排序</li>
+            <li>一旦包了函数，比较对象变成「函数的结果」，索引里存的是原始值——对不上</li>
+            <li>优化器只能放弃索引，退化成全表扫描</li>
+          </ul>
+        </li>
+        <li><b>2.3 最讽刺的地方</b>
+          <ul>
+            <li>核实建表文件发现：<b>两张表本来就都是 <code>utf8mb4_unicode_ci</code></b>，这两处 <code>CONVERT</code> 纯属多余</li>
+            <li>迁移文件显示<b>前任已经专门为这个查询建过索引</b>：<code>idx_bet_order_state_settled_feed (to_status, create_time, aggregate_no, id)</code></li>
+            <li>索引建得完全正确，只是被那两行 <code>CONVERT</code> 挡住，从未生效过</li>
+          </ul>
+        </li>
+        <li><b>2.4 修复：只删函数，不加索引</b>
+          <ul>
+            <li>删掉两侧 <code>CONVERT</code>，让既有索引能看见</li>
+            <li>同类坑：<code>DATE(col)</code>、<code>UPPER(col)</code>、<code>col+0</code>、隐式类型转换、<code>LIKE '%x'</code></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B2">B2 SQL</a> · <a class="xref" href="#P4">P4 有索引仍全表扫</a> · <a class="xref" href="#C5">C5 慢日志</a> · <a class="xref" href="#F2">F2 禁止性断言</a></div>
+    </li>
+
+    <li id="C3" class="c-red">
+      <div class="lv1"><span class="code">C3</span><h3>NOT EXISTS 相关子查询：逐行循环</h3><span class="goal">第二个病灶</span></div>
+      <p class="plain"><b>说白了：</b>为了找出「每个订单的第一条结算记录」，原来的写法是「每拿到一行，就回去重新查一遍有没有更早的」——行数越多，重复劳动越多，是乘积关系。</p>
+      <p class="def"><code>NOT EXISTS</code> 是相关子查询：外层每返回一行，内层就要执行一次。外层几十万行，内层就几十万次。</p>
+      <ul class="sub">
+        <li><b>3.1 修复前</b></li>
+      </ul>
+      <pre><code>AND <span class="del">NOT EXISTS (
+    SELECT 1 FROM bet_order_state_log prior
+    WHERE prior.aggregate_no = settled_log.aggregate_no
+      AND prior.to_status = 'SETTLED'
+      AND prior.id &lt; settled_log.id
+)</span></code></pre>
+      <ul class="sub">
+        <li><b>3.2 修复后</b></li>
+      </ul>
+      <pre><code>AND settled_log.id = (
+    SELECT <span class="add">MIN(s2.id)</span>
+    FROM bet_order_state_log s2
+    WHERE s2.aggregate_no = b.aggregate_no
+      AND s2.to_status = 'SETTLED'
+)</code></pre>
+      <ul class="sub">
+        <li><b>3.3 为什么更快</b>
+          <ul>
+            <li>把「逐行比较」变成「一次定位」</li>
+            <li><code>MIN(id)</code> 能走 <code>aggregate_no</code> 索引的最左前缀，直接取最小值</li>
+            <li>语义也更直白：「第一条 SETTLED」就是 id 最小的那条</li>
+          </ul>
+        </li>
+        <li><b>3.4 通用规律</b>
+          <ul>
+            <li>「取每组第一条 / 最后一条」优先用 <code>MIN</code>/<code>MAX</code> 或窗口函数 <code>ROW_NUMBER()</code></li>
+            <li>不要用相关子查询——它是逐行循环，不是集合运算</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B2">B2 SQL</a> · <a class="xref" href="#P4">P4 索引失效</a></div>
+    </li>
+
+    <li id="C4" class="c-red">
+      <div class="lv1"><span class="code">C4</span><h3>lookbackMinutes = 4320000：一个 8.2 年的窗口</h3><span class="goal">配置比代码更致命</span></div>
+      <p class="plain"><b>说白了：</b>代码写得再好，如果查询条件是「把过去 8 年的记录都找出来」，那索引也只能扫全表。这就像你问「过去 8 年谁中过奖」，图书馆只能把 8 年的报纸全翻一遍。</p>
+      <p class="def"><code>4,320,000</code> 分钟 ÷ 60 ÷ 24 ÷ 365 ≈ <b>8.22 年</b>。首页播报根本不需要这么久的数据。</p>
+      <ul class="sub">
+        <li><b>4.1 它藏在哪</b>
+          <ul>
+            <li>不在代码里，在 <code>activity_campaign_version.config_snapshot_json</code></li>
+            <li>该表是 <b>immutable 设计</b>：版本一旦发布不能原地改，必须走版本发布流程</li>
+          </ul>
+        </li>
+        <li><b>4.2 为什么不能直接 UPDATE</b>
+          <ul>
+            <li>版本表语义是「历史快照」，原地改会让「某版本当时是什么配置」失去可追溯性</li>
+            <li>审计和回滚都会出问题</li>
+          </ul>
+        </li>
+        <li><b>4.3 正确值</b>
+          <ul>
+            <li><code>10080</code>（7 天）——首页播报只需要近期数据</li>
+            <li>如果只播当天，<code>1440</code>（1 天）也够</li>
+          </ul>
+        </li>
+        <li><b>4.4 可迁移的教训</b>
+          <ul>
+            <li>优化时一定要检查「藏在配置里的参数」：时间范围、分页上限、默认排序</li>
+            <li>它们的杀伤力常常超过代码本身</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#C2">C2 索引失效</a> · <a class="xref" href="#P5">P5 CPU 打满</a> · <a class="xref" href="#F1">F1 四项改动</a></div>
+    </li>
+
+    <li id="C5" class="c-red">
+      <div class="lv1"><span class="code">C5</span><h3>慢日志三条铁证：从猜测到定案</h3><span class="goal">排查的转折点</span></div>
+      <p class="plain"><b>说白了：</b>慢日志就是数据库的「病历本」。它一出来，前面所有猜测都可以收起来——因为它写的是事实，不是推断。</p>
+      <p class="def">慢查询日志比任何监控曲线都直接：它告诉你哪条 SQL 慢、慢多久、扫了多少行、锁等了多久。</p>
+      <ul class="sub">
+        <li><b>5.1 原始记录</b></li>
+      </ul>
+      <pre><code>Query_time: 15.400000   Lock_time: 0.000007
+Rows_sent: 61           Rows_examined: 20224459</code></pre>
+      <ul class="sub">
+        <li><b>5.2 三条铁证各说明什么</b>
+          <ul>
+            <li><code>Query_time 15.4s</code>：单条 SQL 就 15 秒，远超可接受范围</li>
+            <li><code>Lock_time 0.000007</code>：<b>几乎没有锁等待</b> → 排除锁竞争，是纯扫描</li>
+            <li><code>Rows_examined 2022 万</code> vs <code>Rows_sent 61</code>：<b>有效率 0.0003%</b></li>
+          </ul>
+        </li>
+        <li><b>5.3 <code>Lock_time</code> 接近零这个细节最关键</b>
+          <ul>
+            <li>如果它很高，说明是并发写导致的锁等待，修法是缩短事务、调整更新顺序</li>
+            <li>它接近零，说明<b>没人在跟它抢锁</b>，它就是单纯在扫表</li>
+            <li>这一条把排查方向从「并发问题」直接扭到「SQL 问题」</li>
+          </ul>
+        </li>
+        <li><b>5.4 怎么开慢日志</b></li>
+      </ul>
+      <pre><code>slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 3
+log_queries_not_using_indexes = 1</code></pre>
+      <div class="rel">关联：<a class="xref" href="#B2">B2 SQL</a> · <a class="xref" href="#B3">B3 磁盘（被排除）</a> · <a class="xref" href="#P5">P5 CPU 打满</a></div>
+    </li>
+
+    <li id="C6" class="c-ok">
+      <div class="lv1"><span class="code">C6</span><h3>双检锁缓存：60 秒 TTL 怎么写得又对又快</h3><span class="goal">P0-4 核心改动</span></div>
+      <p class="plain"><b>说白了：</b>在门口贴一张告示，写上「最近一次中奖名单」。60 秒内来的人直接看告示，不用进去问；60 秒后才有人进去更新一次。这样原来 100 个人各问一次，现在变成 1 分钟问一次。</p>
+      <p class="def">缓存本身简单，难的是两件事：<b>过期瞬间别让 100 个线程同时冲进去查库</b>，以及<b>活动停用要能立刻生效</b>。</p>
+      <ul class="sub">
+        <li><b>6.1 实现要点</b></li>
+      </ul>
+      <pre><code>private volatile ActivityLiveFeedView cachedSnapshot;
+private volatile long cachedSnapshotAt;
+
+public ActivityLiveFeedView publicSnapshot() {
+    ActivityLiveFeedView cached = cachedSnapshot;
+    if (cached != null &amp;&amp; now() - cachedSnapshotAt &lt; 60_000L) return cached;   <span class="cm">// 快路径，不加锁</span>
+
+    synchronized (this) {
+        cached = cachedSnapshot;                                              <span class="cm">// 二次检查，防惊群</span>
+        if (cached != null &amp;&amp; now() - cachedSnapshotAt &lt; 60_000L) return cached;
+
+        ActivityLiveFeedView snapshot = computePublicSnapshot();
+        if ("ACTIVE".equals(snapshot.state())) {
+            cachedSnapshot = snapshot;                                        <span class="cm">// 只缓存 ACTIVE</span>
+            cachedSnapshotAt = now();
+        } else {
+            cachedSnapshot = null;
+        }
+        return snapshot;
+    }
+}</code></pre>
+      <ul class="sub">
+        <li><b>6.2 为什么要 <code>volatile</code> + 二次检查</b>
+          <ul>
+            <li><code>volatile</code>：保证一个线程写入的值对另一个线程立即可见，避免读到半初始化对象</li>
+            <li>锁外第一次检查：命中时<b>完全不加锁</b>，99% 的请求走这条快路径</li>
+            <li>锁内第二次检查：防止缓存过期瞬间多个线程同时穿透、各查一次库</li>
+          </ul>
+        </li>
+        <li><b>6.3 为什么非 ACTIVE 不缓存</b>
+          <ul>
+            <li>活动被停用后必须<b>立即生效</b>，否则运营点了「停用」，首页还会继续展示 60 秒</li>
+            <li>涉及奖金的场景，这个延迟不可接受</li>
+          </ul>
+        </li>
+        <li><b>6.4 通用原则</b>
+          <ul>
+            <li><b>「缓存什么」比「缓存多久」更重要</b></li>
+            <li>只缓存「延迟可接受」的数据；状态、开关、权限这类要即时生效的，宁可不缓存</li>
+          </ul>
+        </li>
+        <li><b>6.5 为什么不用 Redis</b>
+          <ul>
+            <li>当前是单实例部署，本地缓存零依赖、零网络开销，完全够用</li>
+            <li>引入 Redis 反而多一个故障点；将来多实例时再换</li>
+            <li><b>选最简单且正确的方案</b>，而不是最「标准」的方案</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#P10">P10 缓存没生效</a> · <a class="xref p" href="#A2">A2 缓存分层</a> · <a class="xref" href="#F2">F2 测试</a></div>
+    </li>
+
+  </ul>
+</section>
+
+<section id="s5">
+  <h2 class="chap"><span class="no">五</span>修复与验收：改什么、怎么验、什么不改</h2>
+  <p class="chap-intro">修复方案的价值不在「改得多」，而在「改得准」。这一章给出四项改动、验证方式，以及一份<b>明确的不做清单</b>——后者比前者更能防止别人替你「顺手优化」。</p>
+
+  <ul class="tree">
+
+    <li id="F1" class="c-ok">
+      <div class="lv1"><span class="code">F1</span><h3>四项改动，配合才起效</h3><span class="goal">3 项已上代码 · 1 项待发布</span></div>
+      <p class="plain"><b>说白了：</b>一辆车又漏油又没油又堵在路口。你不能只修一样就说「车好了」——得把三件事一起做，车才真的能跑。</p>
+      <p class="def">四项改动分别对应「查询变快」和「查询变少」，缺一项效果都会打折。</p>
+      <table style="margin-top:10px">
+        <tr><th>编号</th><th>改动</th><th>解决什么</th><th>状态</th></tr>
+        <tr><td><b>P0-1</b></td><td>删除 <code>aggregate_no</code> 两处 <code>CONVERT</code></td><td>让既有索引恢复生效</td><td><span class="tag g">已完成</span></td></tr>
+        <tr><td><b>P0-2</b></td><td><code>NOT EXISTS</code> 改 <code>MIN(id)</code> 点查</td><td>消除逐行相关子查询</td><td><span class="tag g">已完成</span></td></tr>
+        <tr><td><b>P0-3</b></td><td><code>lookbackMinutes</code> 4320000 → 10080</td><td>8.2 年窗口收到 7 天</td><td><span class="tag w">待版本发布</span></td></tr>
+        <tr><td><b>P0-4</b></td><td><code>publicSnapshot()</code> 加 60 秒双检锁缓存</td><td>N 个用户共用 1 次查询</td><td><span class="tag g">已完成</span></td></tr>
+      </table>
+      <ul class="sub">
+        <li><b>1.1 为什么这样分级</b>
+          <ul>
+            <li><b>P0</b>：不改就继续故障，且改动小、风险低</li>
+            <li><b>P1</b>：有收益但需确认前置条件（如 <code>uid</code> 的 collation）</li>
+            <li><b>P2</b>：独立工单，与本次故障无直接因果（如 overview 的 30 次查询）</li>
+          </ul>
+        </li>
+        <li><b>1.2 优先级不是「严重程度」，是「性价比」</b>
+          <ul>
+            <li>最严重的可能是架构问题（轮询设计），但改动大、需产品确认</li>
+            <li>删两行 <code>CONVERT</code> 是十分钟的事、零风险、直接见效</li>
+            <li><b>先做性价比最高的，让系统先活下来，再谈架构</b></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#C2">C2 CONVERT</a> · <a class="xref" href="#C3">C3 NOT EXISTS</a> · <a class="xref" href="#C4">C4 窗口</a> · <a class="xref" href="#C6">C6 缓存</a> · <a class="xref" href="#F4">F4 不做什么</a></div>
+    </li>
+
+    <li id="F2" class="c-ok">
+      <div class="lv1"><span class="code">F2</span><h3>测试策略：正向断言 + 禁止性断言</h3><span class="goal">防止被改回去</span></div>
+      <p class="plain"><b>说白了：</b>光测试「新写法在」是不够的——半年后有人把旧写法加回去，新写法也还在，测试照样过。所以要再加一条：<b>「旧写法绝对不许出现」</b>。</p>
+      <p class="def">性能修复必须配禁止性断言，否则一定会被后人「为了兼容性」改回去。</p>
+      <ul class="sub">
+        <li><b>2.1 三类断言</b>
+          <ul>
+            <li><b>正向</b>：确认新写法存在，如 <code>contains("SELECT MIN(s2.id)")</code></li>
+            <li><b>禁止性</b>：确认旧写法消失，如 <code>doesNotContain("CONVERT(settled_log.aggregate_no")</code></li>
+            <li><b>行为</b>：确认缓存真的生效——同一实例调两次，verify 查询只执行 1 次</li>
+          </ul>
+        </li>
+        <li><b>2.2 两条禁止性断言（本次）</b></li>
+      </ul>
+      <pre><code>assertThat(sql).doesNotContain("CONVERT(settled_log.aggregate_no");
+assertThat(sql).doesNotContain("CONVERT(prior.aggregate_no");
+assertThat(sql).doesNotContain("NOT EXISTS");</code></pre>
+      <ul class="sub">
+        <li><b>2.3 两个缓存行为测试</b>
+          <ul>
+            <li>ACTIVE 调两次 → 查询只执行 1 次（缓存命中）</li>
+            <li>DISABLED 调两次 → 查询执行 2 次（<b>停用即时生效</b>）</li>
+          </ul>
+        </li>
+        <li><b>2.4 结果</b>
+          <ul>
+            <li>8/8 通过，0 失败，1.712 秒</li>
+            <li>构建命令两个坑：单模块测试要加 <code>-am</code>；指定 <code>-Dtest</code> 时要配 <code>-Dsurefire.failIfNoSpecifiedTests=false</code></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#C2">C2 CONVERT</a> · <a class="xref" href="#C6">C6 缓存</a> · <a class="xref" href="#F3">F3 验收</a></div>
+    </li>
+
+    <li id="F3" class="c-ok">
+      <div class="lv1"><span class="code">F3</span><h3>部署与验收：三个指标说话</h3><span class="goal">不验收等于没修</span></div>
+      <p class="plain"><b>说白了：</b>改完不验证，等于医生开完药不复查。而复查必须用<b>同一台仪器、同一套参数</b>，否则数据不可比。</p>
+      <p class="def">验收要用修复前的完全相同参数复测，只看三个指标。</p>
+      <ul class="sub">
+        <li><b>3.1 部署五步</b>
+          <ul>
+            <li>备份旧 jar → 上传新 jar（155 MB）→ 重启 → 连打 3 次接口 → 跑 k6 复测</li>
+            <li>第 4 步是最快的验证：第 1 次真查库，第 2、3 次应 <b>&lt; 50ms</b></li>
+            <li>如果第 2、3 次没断崖式下降，<b>先别压测</b>，去查缓存为什么没命中</li>
+          </ul>
+        </li>
+        <li><b>3.2 验收三指标</b>
+          <ul>
+            <li>饱和 RPS：15.31 → 显著上升（预期 10 倍量级）</li>
+            <li>通过线 p95：8.91s → <b>&lt; 1s</b></li>
+            <li>慢日志：<code>bet_order_aggregate b</code> <b>零新增</b></li>
+          </ul>
+        </li>
+        <li><b>3.3 复测时还要看两件事</b>
+          <ul>
+            <li><b>瓶颈有没有转移</b>：原来卡在 L1，修好后可能暴露 L2 或 GC——这是好事，说明前进了一层</li>
+            <li><b>缓存一致性</b>：手动停用活动，确认首页立即消失（最多 60 秒内）</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#F1">F1 改动</a> · <a class="xref" href="#B5">B5 判据</a> · <a class="xref" href="#K1">K1 容量</a></div>
+    </li>
+
+    <li id="F4" class="c-ok">
+      <div class="lv1"><span class="code">F4</span><h3>明确「不做什么」，以及为什么</h3><span class="goal">防止好心办坏事</span></div>
+      <p class="plain"><b>说白了：</b>一份没有边界的方案，执行的人会把自己觉得该改的一起改。出了问题，你根本不知道是哪一处改动导致的。</p>
+      <p class="def">把「不做什么」写清楚，等于给这次修复画了一条可回滚的边界。</p>
+      <table style="margin-top:10px">
+        <tr><th>不做</th><th>理由</th></tr>
+        <tr><td>不新增索引</td><td>索引早已存在，问题是被 <code>CONVERT</code> 挡住。加索引是重复建设</td></tr>
+        <tr><td>不调大 Hikari 24</td><td>12 核服务器的合理值（约 <code>core×2+1</code>）。调大会加剧内部争用</td></tr>
+        <tr><td>不改 <code>max_connections=200</code></td><td>实际只用 44（24+20），远不是瓶颈</td></tr>
+        <tr><td>不动 overview 接口</td><td>它自身有 30 次重复查询，但那是独立工单</td></tr>
+        <tr><td>不改 <code>uid</code> 的 <code>CONVERT</code></td><td><code>user_info</code> 仅 5110 行，影响可忽略；且 collation 需先确认</td></tr>
+      </table>
+      <ul class="sub">
+        <li><b>什么情况下才该调大连接池</b>
+          <ul>
+            <li>单次查询已经很快（&lt; 50ms）</li>
+            <li>MySQL CPU 有大量余量</li>
+            <li>连接池 <code>pending</code> 持续 &gt; 0 但 CPU 不满</li>
+            <li>本次三个条件<b>一个都不满足</b>，所以不动</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B1">B1 连接池</a> · <a class="xref" href="#P11">P11 加机器没变快</a> · <a class="xref p" href="#A6">A6 分库分表</a></div>
+    </li>
+
+  </ul>
+</section>
+<section id="s6">
+  <h2 class="chap"><span class="no">六</span>专业做法：大厂怎么把问题消化在架构里</h2>
+  <p class="chap-intro">「是不是我的项目注定用不满服务器资源？」——不是。差别只有一个：<b>专业团队让尽可能多的请求在到达数据库之前就被消化掉</b>，而不是让每个请求都老老实实走到 SQL。这一章讲整体怎么做，以及每一层在什么条件下才该上。</p>
+
+  <div class="callout">
+    <h4>一句话原理</h4>
+    <p>服务器资源是<b>并联</b>的，木桶的最短板决定水位。你的 12 核只用一半、47G 内存只用 8G、磁盘几乎空闲，不是浪费，而是<b>短板在别处</b>。专业做法不是「把所有资源都堆满」，而是「逐层把请求拦下来，让短板不再被无效工作占住」。</p>
+  </div>
+
+  <h3 style="font-size:16px;margin:0 0 12px">整体怎么做：七层消化，按性价比排序</h3>
+  <table>
+    <tr><th>#</th><th>手段</th><th>消化掉什么</th><th>成本</th><th>收益</th><th>什么时候上</th></tr>
+    <tr><td>1</td><td><b>改 SQL / 修索引</b></td><td>单次查询从秒级到毫秒级</td><td>极低</td><td>最大</td><td><b>永远第一个做</b></td></tr>
+    <tr><td>2</td><td><b>加缓存</b></td><td>让大部分请求不碰库</td><td>低</td><td>大</td><td>读多写少、允许秒级延迟</td></tr>
+    <tr><td>3</td><td><b>异步化</b></td><td>同步写变成排队写，削峰</td><td>中</td><td>大</td><td>写多、可接受最终一致</td></tr>
+    <tr><td>4</td><td><b>读写分离</b></td><td>读压力分散到从库</td><td>中</td><td>中</td><td>读远多于写、主库 CPU 打满</td></tr>
+    <tr><td>5</td><td><b>限流降级</b></td><td>过载时保核心，牺牲边缘</td><td>低</td><td>中</td><td>有突发流量、需要保命</td></tr>
+    <tr><td>6</td><td><b>隔离舱</b></td><td>慢功能不拖死主业务</td><td>低</td><td>中</td><td>存在明显慢接口</td></tr>
+    <tr><td>7</td><td><b>分库分表</b></td><td>单表数据量过大</td><td>很高</td><td>视情况</td><td><b>最后手段，慎用</b></td></tr>
+  </table>
+
+  <div class="callout warn">
+    <h4>顺序比手段本身更重要</h4>
+    <p>大厂也是按这个顺序做的。<b>很多团队一上来就谈分库分表，结果发现 90% 的请求本来可以被一个缓存挡掉。</b>用架构复杂度去弥补 SQL 的粗糙，是最贵的错误。</p>
+  </div>
+
+  <ul class="tree">
+
+    <li id="A2" class="c-purple">
+      <div class="lv1"><span class="code">A2</span><h3>缓存：让请求根本到不了数据库</h3><span class="goal">性价比第二高</span></div>
+      <p class="plain"><b>说白了：</b>与其把柜台办得更快，不如在门口贴张纸，把 80% 的人的问题直接答了。柜台压力立刻降下来。</p>
+      <p class="def">缓存是投入产出比最高的一层。但缓存有三个经典问题，必须一起解决，否则会从「加速」变成「事故」。</p>
+      <ul class="sub">
+        <li><b>2.1 多级缓存</b>
+          <ul>
+            <li><b>浏览器 / CDN</b>：静态资源、允许公开的列表数据（<code>max-age</code>）</li>
+            <li><b>本地缓存</b>（Caffeine / 双检锁）：单实例、变化不频繁、允许秒级延迟</li>
+            <li><b>Redis</b>：多实例共享、需要跨进程一致</li>
+            <li>顺序：越靠前越便宜，优先用靠前的</li>
+          </ul>
+        </li>
+        <li><b>2.2 三大问题及解法</b>
+          <ul>
+            <li><b>穿透</b>（查不存在的数据）→ 空值也缓存、布隆过滤器</li>
+            <li><b>击穿</b>（热点 key 过期瞬间）→ <b>双检锁</b>、逻辑过期、永不过期 + 后台刷新</li>
+            <li><b>雪崩</b>（大量 key 同时过期）→ TTL 加随机抖动</li>
+          </ul>
+        </li>
+        <li><b>2.3 什么不能缓存</b>
+          <ul>
+            <li>状态、开关、权限——必须即时生效的数据，宁可不缓存</li>
+            <li>资金余额这类强一致数据，缓存只做「展示」，不做「判断」</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#C6">C6 双检锁缓存</a> · <a class="xref" href="#P10">P10 缓存没生效</a> · <a class="xref" href="#B1">B1 连接池</a></div>
+    </li>
+
+    <li id="A3" class="c-purple">
+      <div class="lv1"><span class="code">A3</span><h3>读写分离：把读压力分出去</h3><span class="goal">读多写少才有效</span></div>
+      <p class="plain"><b>说白了：</b>一个收银台忙不过来，就再开几个只负责「查询」的窗口，收钱还是那一个窗口。查询压力立刻分散。</p>
+      <p class="def">主库负责写，从库负责读，通过 binlog 同步。适合「读远多于写」的场景。</p>
+      <ul class="sub">
+        <li><b>3.1 什么时候该上</b>
+          <ul>
+            <li>读写比 10:1 以上，且主库 CPU 长期高</li>
+            <li>SQL 已经优化过、缓存也加过了，还是不够</li>
+          </ul>
+        </li>
+        <li><b>3.2 必须处理的代价</b>
+          <ul>
+            <li><b>主从延迟</b>：刚写完立刻读可能读不到 → 关键路径强制走主库</li>
+            <li>连接数翻倍：每加一个从库就多一组连接池，要重新算 <code>max_connections</code></li>
+            <li>故障切换：从库挂了要有降级策略</li>
+          </ul>
+        </li>
+        <li><b>3.3 本次为什么没上</b>
+          <ul>
+            <li>瓶颈不是读总量，而是单条 SQL 效率太低</li>
+            <li>加从库只是让两个库一起做傻事，成本翻倍收益为零</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#P11">P11 加机器没变快</a> · <a class="xref" href="#A6">A6 分库分表</a></div>
+    </li>
+
+    <li id="A4" class="c-purple">
+      <div class="lv1"><span class="code">A4</span><h3>异步化：把「等」变成「排队」</h3><span class="goal">削峰利器</span></div>
+      <p class="plain"><b>说白了：</b>用户下单后不需要站在柜台前等仓库发货，只要拿到一张「已受理」的单子就可以走。仓库慢慢发，用户不用等。</p>
+      <p class="def">把同步调用改成写消息队列，快速返回受理结果，后台慢慢处理。它把「响应时间」和「处理时间」解耦了。</p>
+      <ul class="sub">
+        <li><b>4.1 适合什么</b>
+          <ul>
+            <li>通知、积分、统计、对账、发奖——可接受最终一致</li>
+            <li>突发流量削峰（秒杀、活动开奖）</li>
+          </ul>
+        </li>
+        <li><b>4.2 不适合什么</b>
+          <ul>
+            <li>用户必须立刻看到结果的操作（下注成功、扣款成功）</li>
+            <li>强一致的账务路径——除非有可靠的对账补偿</li>
+          </ul>
+        </li>
+        <li><b>4.3 代价</b>
+          <ul>
+            <li>要处理重复消费、消息丢失、顺序问题</li>
+            <li>多了一个中间件要运维</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#A5">A5 限流</a> · <a class="xref" href="#K2">K2 自检</a></div>
+    </li>
+
+    <li id="A5" class="c-purple">
+      <div class="lv1"><span class="code">A5</span><h3>限流降级：过载时保命</h3><span class="goal">必须有的兜底</span></div>
+      <p class="plain"><b>说白了：</b>医院急诊满员时，先看危重病人，轻症排队等——不是不公平，是不这么做所有人都救不了。</p>
+      <p class="def">限流是「主动拒绝一部分请求」，降级是「关掉非核心功能」。两者都是为了让系统在过载时不整体崩溃。</p>
+      <ul class="sub">
+        <li><b>5.1 限流算法怎么选</b>
+          <ul>
+            <li>计数器：最简单，有临界问题</li>
+            <li>滑动窗口：精度好，实现稍复杂</li>
+            <li><b>令牌桶</b>：允许一定突发，最常用</li>
+            <li>漏桶：输出绝对平滑，适合保护下游</li>
+          </ul>
+        </li>
+        <li><b>5.2 降级降什么</b>
+          <ul>
+            <li>非核心：推荐位、排行榜、播报、统计</li>
+            <li>核心：登录、下注、余额——<b>绝不降级</b></li>
+          </ul>
+        </li>
+        <li><b>5.3 本次的启示</b>
+          <ul>
+            <li>播报接口完全可以在过载时直接返回上一次的缓存，而不是去查库</li>
+            <li>这就是「缓存即降级」——最优雅的降级是不需要额外代码</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#A7">A7 隔离舱</a> · <a class="xref" href="#C1">C1 放大链</a></div>
+    </li>
+
+    <li id="A6" class="c-purple">
+      <div class="lv1"><span class="code">A6</span><h3>分库分表：最后手段，别急着上</h3><span class="goal">成本最高</span></div>
+      <p class="plain"><b>说白了：</b>把一本厚账本拆成十本薄账本，找起来是快了，但以后要「查全公司总额」就得跑十个地方加总——复杂度是翻倍的。</p>
+      <p class="def">分库分表解决的是「单表数据量过大导致索引变深、维护变难」，<b>不解决「SQL 写得烂」</b>。</p>
+      <ul class="sub">
+        <li><b>6.1 什么时候才真的需要</b>
+          <ul>
+            <li>单表行数过千万级，且索引优化、归档、缓存都做过还是慢</li>
+            <li>单库写入量超过单实例承载</li>
+          </ul>
+        </li>
+        <li><b>6.2 一旦上了，要付的代价</b>
+          <ul>
+            <li>跨分片查询、分页、排序都变复杂</li>
+            <li>分布式事务、全局 ID、数据迁移</li>
+            <li>运维和排障难度显著上升</li>
+          </ul>
+        </li>
+        <li><b>6.3 更便宜的替代方案，先试这些</b>
+          <ul>
+            <li><b>冷热分离</b>：历史数据归档到另一张表/另一个库，热表就小了</li>
+            <li><b>缩小查询窗口</b>：本次的 <code>lookbackMinutes</code> 从 8.2 年收到 7 天，效果等同「数据变少了」→ 见 <a class="xref r" href="#C4">C4</a></li>
+            <li><b>加索引 / 改 SQL</b>：90% 的「数据量太大」其实是「没走对索引」</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#C4">C4 时间窗口</a> · <a class="xref" href="#P11">P11 加机器没变快</a> · <a class="xref" href="#F4">F4 不做什么</a></div>
+    </li>
+
+    <li id="A7" class="c-purple">
+      <div class="lv1"><span class="code">A7</span><h3>隔离舱：一个慢功能不该拖死全站</h3><span class="goal">小团队最该先做的一条</span></div>
+      <p class="plain"><b>说白了：</b>船底要分舱。一个舱进水，其他舱还能浮着。如果全船是一个大通舱，破一个洞就一起沉。</p>
+      <p class="def">给可能很慢的接口配<b>独立的连接池 / 线程池</b>，即使它慢了，也只耗尽自己的资源，不会把主业务的连接全吃掉。</p>
+      <ul class="sub">
+        <li><b>7.1 本次故障本可以被这一条拦住</b>
+          <ul>
+            <li>播报接口若单独用 4 个连接，它最多把 4 个占满</li>
+            <li>主业务仍有 20 个连接可用，<b>用户完全感知不到</b></li>
+            <li>而现在它们共用一个池子，等于「一个功能生病，全站陪葬」</li>
+          </ul>
+        </li>
+        <li><b>7.2 怎么划隔离</b>
+          <ul>
+            <li>按「快慢」划：核心交易 vs 报表/播报/统计</li>
+            <li>按「重要度」划：付费用户 vs 免费用户（高级玩法）</li>
+            <li>按「依赖」划：走主库的 vs 走从库/缓存的</li>
+          </ul>
+        </li>
+        <li><b>7.3 成本极低</b>
+          <ul>
+            <li>Spring 里多配一个 <code>DataSource</code> + 一个 <code>@Qualifier</code></li>
+            <li>不需要拆服务、不需要新机器</li>
+            <li><b>这是性价比最高的架构级防护</b></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B1">B1 连接池</a> · <a class="xref" href="#C1">C1 放大链</a> · <a class="xref" href="#A5">A5 限流降级</a></div>
+    </li>
+
+    <li id="A8" class="c-purple">
+      <div class="lv1"><span class="code">A8</span><h3>可观测性：决定你多久才知道出事</h3><span class="goal">回报率最高</span></div>
+      <p class="plain"><b>说白了：</b>这次故障最根本的问题不是 SQL，是<b>没人知道</b>。一条 15 秒的 SQL 跑了很久，没有任何告警。如果有告警，它当天就会被发现，而不是等到压测。</p>
+      <p class="def">可观测性不提升性能，但它把「三个月后偶然发现」变成「三分钟后主动知道」，损失差两个数量级。</p>
+      <ul class="sub">
+        <li><b>8.1 必须有的三条告警</b>
+          <ul>
+            <li>慢查询速率：&gt; 3 秒的 SQL 每分钟超过 10 条</li>
+            <li>连接池 pending：持续 &gt; 0 超过 30 秒</li>
+            <li>Buffer Pool 命中率 &lt; 99%</li>
+          </ul>
+        </li>
+        <li><b>8.2 三个必须长期开着的开关</b>
+          <ul>
+            <li>MySQL 慢查询日志（<code>long_query_time=3</code>，并记 <code>log_queries_not_using_indexes</code>）</li>
+            <li>GC 日志（<code>-Xlog:gc*</code>）</li>
+            <li>接口耗时分布（p50 / p95 / p99，而不是平均值）</li>
+          </ul>
+        </li>
+        <li><b>8.3 为什么平均值会骗人</b>
+          <ul>
+            <li>100 个请求里 95 个 10ms、5 个 10 秒，平均值只有 510ms，看起来「还行」</li>
+            <li>但 p95 是 10 秒——<b>看平均值会漏掉最严重的问题</b></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#C5">C5 慢日志</a> · <a class="xref" href="#B5">B5 判据</a> · <a class="xref" href="#K2">K2 自检</a></div>
+    </li>
+
+  </ul>
+</section>
+
+<section id="s7">
+  <h2 class="chap"><span class="no">七</span>自检清单与容量结论</h2>
+  <p class="chap-intro">最后给三样东西：现在能撑多少人、上线前该自检什么、以及还剩哪些坑没填。</p>
+
+  <ul class="tree">
+
+    <li id="K1" class="c-teal">
+      <div class="lv1"><span class="code">K1</span><h3>容量结论：现在能撑多少人</h3><span class="goal">修复前基线</span></div>
+      <p class="plain"><b>说白了：</b>不是「服务器只能服务 100 人」，而是「在一条 15 秒 SQL 的拖累下，只能服务 100 人」。<b>这是软件问题，不是硬件天花板。</b></p>
+      <p class="def">推算链条：饱和吞吐 × 用户请求频率 × 余量系数 ÷ 日活在线比。</p>
+      <ul class="sub">
+        <li><b>1.1 推算过程</b></li>
+      </ul>
+      <pre><code>① 饱和吞吐 = 24 连接 ÷ 1.57 s = 15.31 RPS（实测吻合）
+② 单个在线用户请求频率 ≈ 每 6~10 秒一次
+③ 饱和在线用户数 = 15.31 × 8 ≈ 120 人
+④ 生产留 50% 余量 → 顺畅约 60 人
+⑤ 日活 / 在线峰值 ≈ 50:1 → 日活 3000~8000</code></pre>
+      <ul class="sub">
+        <li><b>1.2 三档结论</b>
+          <ul>
+            <li>顺畅 50~100 人：p95 &lt; 1s，无明显卡顿</li>
+            <li>明显卡 200 人：p95 7s+，中位数半秒以上</li>
+            <li>报错 400+ 人：连接池超时，大量失败</li>
+          </ul>
+        </li>
+        <li><b>1.3 硬件余量对照</b>
+          <ul>
+            <li>CPU 12 核，压测时约 50% → 过剩</li>
+            <li>内存 47G，压测时约 8G → 严重过剩</li>
+            <li>磁盘几乎空闲 → 过剩</li>
+            <li><b>连接池 24，100% 打满 → 唯一短板</b></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="rel">关联：<a class="xref" href="#B6">B6 吞吐公式</a> · <a class="xref" href="#T5">T5 闭环</a> · <a class="xref" href="#F3">F3 验收</a></div>
+    </li>
+
+    <li id="K2" class="c-teal">
+      <div class="lv1"><span class="code">K2</span><h3>上线前自检清单</h3><span class="goal">每次发布前过一遍</span></div>
+      <p class="plain"><b>说白了：</b>这份清单相当于「出门前摸口袋：手机、钥匙、钱包」。九成事故都是忘了其中一条。</p>
+      <p class="def">按「SQL → 缓存 → 连接 → 观测」四组检查，每组都能挡住一类事故。</p>
+      <ul class="check" style="margin-top:10px">
+        <li><span class="ly">SQL</span><span>新增或修改的 SQL，都跑过 <code>EXPLAIN</code>，确认走了索引、没有 <code>type=ALL</code></span></li>
+        <li><span class="ly">SQL</span><span>JOIN 条件两侧<b>没有函数包裹</b>（<code>CONVERT</code> / <code>DATE</code> / <code>UPPER</code>）</span></li>
+        <li><span class="ly">SQL</span><span>查询带了合理的时间范围，<b>没有 8 年这种离谱窗口</b></span></li>
+        <li><span class="ly">SQL</span><span>没有在循环里查库（N+1），列表类接口用批量查询</span></li>
+        <li><span class="ly">缓存</span><span>高频只读接口有缓存，且 TTL 合理</span></li>
+        <li><span class="ly">缓存</span><span>缓存<b>真的命中</b>（连打两次，第二次 &lt; 50ms）</span></li>
+        <li><span class="ly">缓存</span><span>没有 <code>noStore()</code> 与缓存设计冲突</span></li>
+        <li><span class="ly">连接</span><span>慢接口有<b>独立连接池</b>，不会拖死主业务</span></li>
+        <li><span class="ly">连接</span><span>轮询类接口间隔 ≥ 30 秒，页面不可见时暂停</span></li>
+        <li><span class="ly">观测</span><span>慢查询日志开启，且有人看告警</span></li>
+        <li><span class="ly">观测</span><span>接口有 p95 / p99 指标，不只看平均值</span></li>
+        <li><span class="ly">观测</span><span>连接池 <code>pending</code> 有告警</span></li>
+      </ul>
+      <div class="rel">关联：<a class="xref p" href="#A8">A8 可观测性</a> · <a class="xref" href="#C2">C2 CONVERT</a> · <a class="xref" href="#A7">A7 隔离舱</a></div>
+    </li>
+
+    <li id="K3" class="c-teal">
+      <div class="lv1"><span class="code">K3</span><h3>还没填的坑</h3><span class="goal">已登记，不在本次范围</span></div>
+      <p class="plain"><b>说白了：</b>修完最疼的那一刀，不代表伤口都好了。把剩下的记下来，别让它变成下一次事故。</p>
+      <p class="def">这些项与本次故障无直接因果，但都会在下一轮压力下暴露。</p>
+      <table style="margin-top:10px">
+        <tr><th>#</th><th>项</th><th>问题</th><th>优先级</th></tr>
+        <tr><td>1</td><td><code>wallet-center/overview</code></td><td>一个请求触发 <b>30 次</b>重复查询</td><td>P1</td></tr>
+        <tr><td>2</td><td><code>uid</code> 的 <code>CONVERT</code></td><td>需先确认 <code>utf8mb4_bin</code> 与其他表的 collation 关系</td><td>P1</td></tr>
+        <tr><td>3</td><td>前端轮询间隔</td><td>偏短，且页面不可见时未暂停</td><td>P1</td></tr>
+        <tr><td>4</td><td>播报接口 <code>noStore()</code></td><td>禁止所有缓存，与 60 秒 TTL 设计冲突</td><td>P2</td></tr>
+        <tr><td>5</td><td>慢查询告警</td><td>15.4 秒的 SQL 长期存在却无人知晓</td><td><b>P1</b></td></tr>
+      </table>
+      <div class="rel">关联：<a class="xref" href="#P8">P8 N+1</a> · <a class="xref p" href="#A8">A8 可观测性</a> · <a class="xref" href="#C1">C1 放大链</a></div>
+    </li>
+
+    <li id="K4" class="c-teal">
+      <div class="lv1"><span class="code">K4</span><h3>如果只记五件事</h3><span class="goal">收尾</span></div>
+      <p class="plain"><b>说白了：</b>知识会忘，但下面这五条是这次事故换来的，值得背下来。</p>
+      <ol style="margin:0;padding-left:22px;font-size:14px;color:var(--ink-2)">
+        <li><b>压测数字必须绑定发起端</b>——本机测出的是链路极限，不是服务器容量。</li>
+        <li><b>中位数高说明全体排队</b>，不是少数慢请求——直接指向连接池。</li>
+        <li><b>吞吐 = 槽位数 ÷ 停留时间</b>，缩短停留时间比增加槽位有效得多。</li>
+        <li><b>索引失效最常见的原因是函数包列</b>——有索引也要 <code>EXPLAIN</code> 确认。</li>
+        <li><b>连接池属于应用，不属于数据库</b>，调大它治不了慢 SQL。</li>
+      </ol>
+      <div class="callout ok" style="margin:16px 0 0">
+        <h4>如果只做一件事</h4>
+        <p><b>配慢查询告警。</b>这次故障从「一条 15 秒的 SQL」演变成「全站排队」，中间隔了很久却无人发现。一条告警就能把发现时间从「几个月」缩短到「几分钟」——<b>观测能力的投入回报率，永远高于优化本身。</b></p>
+      </div>
+      <div class="rel">关联：<a class="xref" href="#s0">零 · 一页看懂</a> · <a class="xref p" href="#A8">A8 可观测性</a></div>
+    </li>
+
+  </ul>
+</section>
+
+<footer>
+  压测与性能排查手册 · 基于 2026-11-16 ~ 11-17 两轮压测（11 次测试）与一次真实线上故障的复盘<br>
+  案例环境：piSports 玩家端 · 12 核 / 47G / MySQL 单实例（Buffer Pool 4G / max_connections 200 / Hikari 24）<br>
+  脚本位置 <code>E:/projects/test/loadtest/</code> · 全部测试为只读 GET，未产生任何业务数据
+</footer>
+
+</div>
+</body>
+</html>
